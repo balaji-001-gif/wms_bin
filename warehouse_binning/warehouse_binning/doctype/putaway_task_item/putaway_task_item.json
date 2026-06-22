@@ -1,0 +1,30 @@
+{
+	"actions": [],
+	"creation": "2026-01-01 00:00:00.000000",
+	"doctype": "DocType",
+	"editable_grid": 1,
+	"engine": "InnoDB",
+	"field_order": ["item_code", "batch_no", "qty", "uom", "suggested_bin", "actual_bin", "scanned", "source_row"],
+	"fields": [
+		{"fieldname": "item_code", "fieldtype": "Link", "label": "Item", "options": "Item", "reqd": 1, "in_list_view": 1},
+		{"fieldname": "batch_no", "fieldtype": "Link", "label": "Batch", "options": "Batch", "in_list_view": 1},
+		{"fieldname": "qty", "fieldtype": "Float", "label": "Qty", "reqd": 1, "in_list_view": 1},
+		{"fieldname": "uom", "fieldtype": "Link", "label": "UOM", "options": "UOM"},
+		{"fieldname": "suggested_bin", "fieldtype": "Link", "label": "Suggested Bin", "options": "Bin Location"},
+		{"fieldname": "actual_bin", "fieldtype": "Link", "label": "Actual Bin", "options": "Bin Location", "in_list_view": 1},
+		{"fieldname": "scanned", "fieldtype": "Check", "label": "Scanned", "in_list_view": 1},
+		{"fieldname": "source_row", "fieldtype": "Data", "label": "Source Row", "hidden": 1, "read_only": 1}
+	],
+	"index_web_pages_for_search": 1,
+	"istable": 1,
+	"links": [],
+	"modified": "2026-01-01 00:00:00.000000",
+	"modified_by": "Administrator",
+	"module": "Warehouse Binning",
+	"name": "Putaway Task Item",
+	"owner": "Administrator",
+	"permissions": [],
+	"sort_field": "modified",
+	"sort_order": "DESC",
+	"states": []
+}

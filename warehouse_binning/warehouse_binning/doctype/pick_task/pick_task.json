@@ -1,0 +1,102 @@
+{
+	"actions": [],
+	"autoname": "naming_series:",
+	"creation": "2026-06-22 00:00:00.000000",
+	"doctype": "DocType",
+	"editable_grid": 1,
+	"engine": "InnoDB",
+	"field_order": [
+		"naming_series",
+		"work_order",
+		"material_request",
+		"warehouse",
+		"posting_date",
+		"status",
+		"items"
+	],
+	"fields": [
+		{
+			"fieldname": "naming_series",
+			"fieldtype": "Select",
+			"label": "Series",
+			"options": "PICK-.YYYY.-",
+			"default": "PICK-.YYYY.-"
+		},
+		{
+			"fieldname": "work_order",
+			"fieldtype": "Link",
+			"label": "Work Order",
+			"options": "Work Order",
+			"in_list_view": 1
+		},
+		{
+			"fieldname": "material_request",
+			"fieldtype": "Link",
+			"label": "Material Request",
+			"options": "Material Request",
+			"in_list_view": 1
+		},
+		{
+			"fieldname": "warehouse",
+			"fieldtype": "Link",
+			"label": "Warehouse",
+			"options": "Warehouse",
+			"reqd": 1,
+			"in_list_view": 1
+		},
+		{
+			"fieldname": "posting_date",
+			"fieldtype": "Date",
+			"label": "Posting Date",
+			"in_list_view": 1
+		},
+		{
+			"fieldname": "status",
+			"fieldtype": "Select",
+			"label": "Status",
+			"options": "Pending\nPartially Completed\nCompleted",
+			"default": "Pending",
+			"in_list_view": 1,
+			"read_only": 1
+		},
+		{
+			"fieldname": "items",
+			"fieldtype": "Table",
+			"label": "Items",
+			"options": "Pick Task Item",
+			"reqd": 1
+		}
+	],
+	"index_web_pages_for_search": 1,
+	"is_submittable": 0,
+	"links": [],
+	"modified": "2026-06-22 00:00:00.000000",
+	"modified_by": "Administrator",
+	"module": "Warehouse Binning",
+	"name": "Pick Task",
+	"owner": "Administrator",
+	"permissions": [
+		{
+			"role": "Stock Manager",
+			"read": 1,
+			"write": 1,
+			"create": 1,
+			"delete": 1
+		},
+		{
+			"role": "Stock User",
+			"read": 1,
+			"write": 1,
+			"create": 1
+		},
+		{
+			"role": "Warehouse Technician",
+			"read": 1,
+			"write": 1
+		}
+	],
+	"sort_field": "modified",
+	"sort_order": "DESC",
+	"states": [],
+	"track_changes": 1
+}

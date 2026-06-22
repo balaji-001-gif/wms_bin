@@ -1,0 +1,20 @@
+[
+	{
+		"doctype": "Custom Field",
+		"dt": "Pick List Item",
+		"fieldname": "bin_location",
+		"label": "Bin Location",
+		"fieldtype": "Link",
+		"options": "Bin Location",
+		"insert_after": "warehouse"
+	},
+	{
+		"doctype": "Custom Field",
+		"dt": "Stock Entry Detail",
+		"fieldname": "bin_location",
+		"label": "Bin Location",
+		"fieldtype": "Link",
+		"options": "Bin Location",
+		"insert_after": "s_warehouse"
+	}
+]
