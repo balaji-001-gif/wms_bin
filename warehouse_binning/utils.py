@@ -77,3 +77,21 @@ def get_bin_stock_summary(item_code=None, batch_no=None, warehouse=None):
 		fields=["item_code", "batch_no", "warehouse", "bin_location", "qty"],
 		order_by="bin_location asc",
 	)
+
+
+def get_bin_current_usage(bin_location, warehouse):
+	"""Return the total qty currently stored in a bin across all items/batches."""
+	result = frappe.db.sql(
+		"""
+		SELECT COALESCE(SUM(qty), 0)
+		FROM `tabItem Batch Bin Stock`
+		WHERE bin_location = %s AND warehouse = %s
+		""",
+		(bin_location, warehouse),
+	)
+	return result[0][0] if result else 0
+
+
+def get_bin_capacity(bin_location):
+	"""Return the capacity of a bin location, or None if not set."""
+	return frappe.db.get_value("Bin Location", bin_location, "capacity")

@@ -5,6 +5,32 @@ from warehouse_binning.utils import get_bin_stock_summary
 
 
 # ---------------------------------------------------------------------------
+# Session auth guard — every whitelisted endpoint checks at least one of
+# these roles. The scanning UI is the primary client and uses the Frappe
+# session cookie for auth. Mobile devices authenticate via the same session.
+# ---------------------------------------------------------------------------
+
+_ALLOWED_ROLES = ("Stock Manager", "Stock User", "Warehouse Technician", "System Manager")
+
+
+def _require_role(user=None):
+	"""Ensure the current session user has one of the allowed roles.
+	Frappe's @frappe.whitelist() already requires a logged-in session;
+	this adds a role gate on top.
+	"""
+	user = user or frappe.session.user
+	if frappe.session.user == "Administrator":
+		return
+	roles = frappe.get_roles(user)
+	if not any(r in roles for r in _ALLOWED_ROLES):
+		frappe.throw(
+			"You do not have permission to access this resource. "
+			"A Warehouse Technician, Stock User, or Stock Manager role is required.",
+			title="Insufficient Permissions",
+		)
+
+
+# ---------------------------------------------------------------------------
 # PUTAWAY
 # ---------------------------------------------------------------------------
 
@@ -12,6 +38,7 @@ from warehouse_binning.utils import get_bin_stock_summary
 @frappe.whitelist()
 def get_open_putaway_tasks(warehouse=None):
 	"""Return all non-completed Putaway Tasks, optionally filtered by warehouse."""
+	_require_role()
 	filters = {"status": ["!=", "Completed"]}
 	if warehouse:
 		filters["warehouse"] = warehouse
@@ -23,6 +50,7 @@ def get_open_putaway_tasks(warehouse=None):
 @frappe.whitelist()
 def get_putaway_task_detail(task_name):
 	"""Return a Putaway Task with its full item list for the scanning UI."""
+	_require_role()
 	task = frappe.get_doc("Putaway Task", task_name)
 	items = []
 	for row in task.items:
@@ -54,6 +82,7 @@ def scan_putaway_item(task_name, row_name, actual_bin, batch_no=None):
 	physically landed. Updates the task row, then writes the bin-level
 	stock movement.
 	"""
+	_require_role()
 	return mark_item_scanned(task_name, row_name, actual_bin, batch_no)
 
 
@@ -65,6 +94,7 @@ def scan_putaway_item(task_name, row_name, actual_bin, batch_no=None):
 @frappe.whitelist()
 def get_open_pick_tasks(warehouse=None):
 	"""Return all non-completed Pick Tasks, optionally filtered by warehouse."""
+	_require_role()
 	filters = {"status": ["!=", "Completed"]}
 	if warehouse:
 		filters["warehouse"] = warehouse
@@ -79,6 +109,7 @@ def get_open_pick_tasks(warehouse=None):
 @frappe.whitelist()
 def get_pick_task_detail(task_name):
 	"""Return a Pick Task with its full item list for the scanning UI."""
+	_require_role()
 	task = frappe.get_doc("Pick Task", task_name)
 	items = []
 	for row in task.items:
@@ -110,6 +141,7 @@ def scan_pick_item(task_name, row_name, from_bin=None):
 	"""Called by the scanning UI when a technician confirms picking an item
 	from a bin. Updates the task row and deduces bin stock.
 	"""
+	_require_role()
 	return mark_item_picked(task_name, row_name, from_bin)
 
 
@@ -123,4 +155,5 @@ def lookup_bin_stock(item_code=None, batch_no=None, warehouse=None):
 	"""Traceability lookup: find where any item/batch is stored across bins.
 	All parameters are optional — narrow by item_code, batch_no, or warehouse.
 	"""
+	_require_role()
 	return get_bin_stock_summary(item_code=item_code, batch_no=batch_no, warehouse=warehouse)

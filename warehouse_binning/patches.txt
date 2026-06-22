@@ -1,3 +1,5 @@
 # Migration patches go here, one per line, in order.
-# Example once you go live with existing stock already in warehouses:
-# warehouse_binning.patches.v0_0.backfill_item_batch_bin_stock
+#
+# Before go-live with existing stock already in warehouses, run this patch
+# to backfill Item Batch Bin Stock from the existing Stock Ledger Entry:
+warehouse_binning.warehouse_binning.patches.backfill_item_batch_bin_stock.execute

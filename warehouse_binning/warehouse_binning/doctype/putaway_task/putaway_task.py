@@ -1,6 +1,10 @@
 import frappe
 from frappe.model.document import Document
-from warehouse_binning.utils import update_bin_balance
+from warehouse_binning.utils import (
+	update_bin_balance,
+	get_bin_current_usage,
+	get_bin_capacity,
+)
 
 
 class PutawayTask(Document):
@@ -24,8 +28,26 @@ def mark_item_scanned(task_name, row_name, actual_bin, batch_no=None):
 	physically landed. Updates the task row, then writes the bin-level
 	stock movement — this is the only place incoming putaway qty enters
 	Item Batch Bin Stock.
+
+	Enforces bin capacity: if the bin has a capacity set, the total
+	quantity after adding this item must not exceed it.
 	"""
 	task = frappe.get_doc("Putaway Task", task_name)
+
+	# --- Capacity check ---
+	capacity = get_bin_capacity(actual_bin)
+	if capacity is not None and capacity > 0:
+		current_usage = get_bin_current_usage(actual_bin, task.warehouse)
+		for row in task.items:
+			if row.name == row_name:
+				added_qty = row.qty
+				if current_usage + added_qty > capacity:
+					frappe.throw(
+						f"Bin {actual_bin} capacity ({capacity}) would be exceeded. "
+						f"Current usage: {current_usage}, trying to add: {added_qty}."
+					)
+				break
+
 	target_row = None
 	for row in task.items:
 		if row.name == row_name:
