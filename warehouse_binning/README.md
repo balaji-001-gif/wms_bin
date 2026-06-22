@@ -2,136 +2,296 @@
 
 Bin-level putaway and pick tracking layered on top of ERPNext stock. Tracks every item+batch to a specific rack/bin location — so any technician can find material without searching the warehouse.
 
-## Features
+---
 
-- **Putaway (Receive-to-Bin)**: After a Purchase Receipt is submitted, a Putaway Task is created automatically. A technician scans items into specific bin locations using the mobile scanning UI.
-- **Pick (Issue-from-Bin)**: When a Work Order or Material Request is submitted, a Pick Task is created with bin suggestions (FEFO — First-Expiry-First-Out). The technician picks from the suggested bin and confirms with a scan.
-- **Traceability**: Look up any item or batch to see exactly which bins hold stock and in what quantity.
-- **Offline Support**: Scans are queued locally via IndexedDB when offline and auto-synced when connectivity returns.
-- **FEFO**: Pick suggestions prioritize the earliest-expiring batch first, then the bin with the most stock.
-- **Mobile Scanning UI**: Mobile-first web interface with large touch targets, barcode scanner support, and 3 views (Putaway / Pick / Lookup).
+## End-to-End Standard Operating Procedure (SOP)
 
-## Requirements
+This SOP covers everything from initial setup through go-live to daily warehouse operations.
 
-- ERPNext v15 (or later)
-- Frappe Framework v15 (or later)
-- Python 3.10+
-- Node.js 18+ (for asset building)
+### Contents
 
-## Installation
+1. [System Requirements](#system-requirements)
+2. [Installation](#installation)
+3. [Pre-Go-Live Setup](#pre-go-live-setup)
+4. [Go-Live: Backfill Existing Stock](#go-live-backfill-existing-stock)
+5. [Daily Operations: Receiving (Putaway)](#daily-operations-receiving-putaway)
+6. [Daily Operations: Issuing (Pick)](#daily-operations-issuing-pick)
+7. [Daily Operations: Traceability (Lookup)](#daily-operations-traceability-lookup)
+8. [Offline Mode & Troubleshooting](#offline-mode--troubleshooting)
+9. [Architecture Reference](#architecture-reference)
+10. [Development Guide](#development-guide)
 
-### 1. Install the app on your Frappe site
+---
+
+### System Requirements
+
+| Component | Version |
+|---|---|
+| ERPNext | v15 or later |
+| Frappe Framework | v15 or later |
+| Python | 3.10+ |
+| Node.js | 18+ (for asset building) |
+| Browser | Chrome, Edge, or Safari (mobile or desktop) |
+
+---
+
+### Installation
+
+#### Step 1: Install the app
 
 ```bash
-bench get-app https://github.com/your-org/warehouse_binning
+bench get-app https://github.com/balaji-001-gif/wms_bin
 bench --site your-site install-app warehouse_binning
 bench --site your-site migrate
 ```
 
-The `migrate` step creates the **Warehouse Technician** role and installs custom fields on ERPNext's own doctypes (Pick List Item, Stock Entry Detail).
+The `migrate` step:
+- Creates the **Warehouse Technician** role (no Desk access)
+- Installs `bin_location` custom field on **Pick List Item** and **Stock Entry Detail**
 
-### 2. Set up bin locations
+#### Step 2: Verify installation
 
-Before scanning, you need bin locations set up. Create them in the Frappe Desk:
+```bash
+bench --site your-site console
+```
 
-1. Go to **Warehouse Binning > Bin Location**
-2. Create one entry per rack/bin using the format: `{Warehouse}-{BinCode}`
-3. Set Zone and Rack for visual grouping
+In the console, run:
 
-Or use the API:
 ```python
 import frappe
-bin_loc = frappe.get_doc({
-    "doctype": "Bin Location",
-    "warehouse": "Stores - W",
-    "zone": "A",
-    "rack": "A-01",
-    "bin_code": "A-01-001"
-}).insert()
+frappe.db.exists("Role", "Warehouse Technician")  # Should return True
+frappe.db.exists("Custom Field", {"dt": "Pick List Item", "fieldname": "bin_location"})  # Should return True
 ```
 
-### 3. Assign role to technicians
+#### Step 3: Assign technician roles
 
-1. Go to **User > [Technician User] > Roles**
-2. Add **Warehouse Technician** role
-3. No Desk access needed — technicians use the scanning UI only
+1. Go to **Frappe Desk > User > [Technician's User]**
+2. Under **Roles**, add **Warehouse Technician**
+3. Save
 
-The **Warehouse Technician** role has:
-- Read/Write: Putaway Tasks, Pick Tasks
-- Read: Bin Locations, Item Batch Bin Stock, Bin Stock Ledger Entry
-- No: Delete or Desk access
+> Technicians do NOT need Desk access — they use the scanning UI at `https://your-site/scan`
 
-## Configuration
+---
 
-### Custom Fields
+### Pre-Go-Live Setup
 
-The app installs a `bin_location` (Link → Bin Location) field on:
-- **Pick List Item** — set automatically via FEFO suggestion
-- **Stock Entry Detail** — used for bin validation on submit
+#### Step 1: Create bin locations
 
-No additional configuration is needed.
+Map your physical warehouse racks to Bin Location records.
 
-### Event Hooks (automatic)
+**In the Desk:**
+1. Go to **Warehouse Binning > Bin Location > Add New**
+2. Create one entry per physical bin
 
-| Trigger | Action |
+**Naming convention:** `{WarehouseCode}-{Zone}{Rack}{Bin}`
+
+Example for Warehouse "Stores - W", Zone A, Rack 01, Bin 001:
+```
+Stores - W-A-01-001
+```
+
+**Fields:**
+
+| Field | Example | Description |
+|---|---|---|
+| Warehouse | Stores - W | Link to ERPNext Warehouse |
+| Zone | A | Warehouse zone (A, B, C, etc.) |
+| Rack | A-01 | Physical rack identifier |
+| Bin Code | A-01-001 | Unique bin identifier within warehouse |
+| Capacity | 1000 | (Optional) Max qty this bin can hold |
+| Is Active | ✓ | Enable/disable for scanning |
+
+**Capacity enforcement:** If you set a capacity, the system will reject putaway scans that would overfill the bin. Leave blank for unlimited capacity.
+
+**Bulk import via Data Import:**
+1. Go to **Frappe Desk > Data Import**
+2. Select **Bin Location** as the DocType
+3. Download template and upload your warehouse layout
+
+#### Step 2: Configure bin capacity (optional)
+
+For each Bin Location, set the **Capacity** field to the maximum quantity the bin can physically hold.
+
+During putaway scanning, if the bin already has 800 units and capacity is 1000, scanning 250 more will be rejected with:
+```
+Bin Stores - W-A-01-001 capacity (1000) would be exceeded.
+Current usage: 800, trying to add: 250.
+```
+
+#### Step 3: Verify scanning UI access
+
+1. Log in as a **Warehouse Technician** user
+2. Navigate to `https://your-site/scan`
+3. You should see 3 tabs at the bottom: 📥 Putaway, 📤 Pick, 🔍 Lookup
+4. The header should show **Online**
+
+---
+
+### Go-Live: Backfill Existing Stock
+
+**Problem:** Before go-live, your warehouse already has stock on shelves. ERPNext knows the total qty per item+batch, but the binning system has zero records. Until items are scanned into bins, the Pick and Lookup views will show nothing.
+
+**Solution:** Run the backfill patch to create placeholder records.
+
+#### Run the backfill patch
+
+```bash
+bench --site your-site console
+```
+
+```python
+from warehouse_binning.warehouse_binning.patches.backfill_item_batch_bin_stock import execute
+execute()
+```
+
+**What the patch does:**
+1. Scans `tabStock Ledger Entry` for all warehouses with positive qty
+2. Creates an **inactive** placeholder bin: `{Warehouse}-UNKNOWN`
+3. Moves existing item+batch qty into that bin in `Item Batch Bin Stock`
+4. Writes audit entries to `Bin Stock Ledger Entry`
+
+#### After backfill: physical audit
+
+1. Print bin location labels for all racks
+2. Physically verify each item+batch is in its correct bin
+3. For items in the correct bin, do a **zero-qty putaway scan** to move from UNKNOWN to real bin
+4. For misplaced items, move them physically and update in the system
+
+> The backfill ensures day-one non-zero data for Pick suggestions and Lookup. The physical audit corrects any inaccuracies.
+
+---
+
+### Daily Operations: Receiving (Putaway)
+
+**Trigger:** A Purchase Receipt is submitted in ERPNext.
+
+#### System flow (automatic)
+
+```
+1. PR submitted by Procurement team
+2. Event hook fires: purchase_receipt.create_putaway_tasks()
+3. Putaway Task created (one per warehouse on the PR)
+4. Status: "Pending"
+```
+
+#### Technician flow (scanning UI)
+
+1. Open `https://your-site/scan`
+2. Tap **📥 Putaway** tab
+3. Open Putaway Tasks appear with status badges (Pending / Partially Completed)
+4. Tap a task card to expand items
+
+**For each item row:**
+5. Take the item to the physical bin location
+6. Tap **Scan Bin** → a dialog opens
+7. Scan or type the bin barcode → **Confirm**
+
+**Capacity check:** If the bin has a Capacity set and adding the item would exceed it, the scan is rejected with a clear message.
+
+8. The item row updates to ✓ Scanned, and the progress bar advances
+9. When all items are scanned, the task status changes to **Completed**
+
+#### What happens in the system
+
+```
+Putaway Task item scanned
+  → Item Batch Bin Stock updated (+qty)
+  → Bin Stock Ledger Entry created (immutable audit trail)
+```
+
+---
+
+### Daily Operations: Issuing (Pick)
+
+**Trigger:** A Work Order is submitted OR a Material Request (Material Issue type) is submitted in ERPNext.
+
+#### System flow (automatic)
+
+```
+Work Order submitted
+  → Event hook fires: work_order.create_pick_tasks()
+  → Pick Task created with suggested bins (FEFO)
+  → Status: "Pending"
+
+Material Request (Material Issue) submitted
+  → Event hook fires: material_request.create_pick_tasks()
+  → Pick Task created with suggested bins (FEFO)
+  → Status: "Pending"
+```
+
+**FEFO logic:** The system suggests the bin holding the **earliest-expiring batch** first. Batches without expiry dates are sorted last.
+
+#### Technician flow (scanning UI)
+
+1. Open `https://your-site/scan`
+2. Tap **📤 Pick** tab
+3. (Optional) Filter by warehouse using the search bar
+4. Open Pick Tasks appear with reference (WO / MR number)
+5. Tap a task card to expand items
+
+**For each item row:**
+6. Go to the suggested bin location
+7. Tap **Pick** → a dialog opens
+8. Scan or type the bin barcode to confirm
+
+**Bin validation:** The scanned bin must match the suggested bin. If it doesn't match, the scan is rejected.
+
+9. The item row updates to ✓ Picked, and bin stock is deducted
+10. When all items are picked, the task status changes to **Completed**
+
+#### Creating the Stock Entry
+
+After all items in a Pick Task are picked:
+1. Go to the Frappe Desk
+2. Create a **Stock Entry** (Material Issue or Material Transfer for Manufacture)
+3. The bin_location field on each row will show the bin from which the item was picked
+4. On submit, the system validates bin qty and updates the ledger
+
+---
+
+### Daily Operations: Traceability (Lookup)
+
+Use the Lookup view to find where any item or batch is stored.
+
+1. Open `https://your-site/scan`
+2. Tap **🔍 Lookup** tab
+3. Scan or type an item code or batch number → press Enter or tap Search
+
+**Results show:**
+- **Total Qty** — sum across all bins
+- **Bins** — number of unique bin locations
+- **Entries** — number of item+batch+bin combinations
+- **Table** — every bin with stock, showing Bin, Item, Batch, and Qty
+
+---
+
+### Offline Mode & Troubleshooting
+
+#### Offline behavior
+
+| Situation | What happens |
 |---|---|
-| Purchase Receipt submitted | Creates Putaway Tasks (one per warehouse) |
-| Work Order submitted | Creates Pick Tasks for required materials |
-| Material Request submitted | Creates Pick Tasks (Material Issue type only) |
-| Stock Entry validating | Validates bin quantity before submit |
-| Stock Entry submitted | Deducts from bin ledger |
-| Stock Entry cancelled | Reverses bin ledger deduction |
-| Pick List validating | Suggests FEFO bin (earliest expiry first) |
+| Device goes offline | Header badge changes to **Offline** |
+| Technician scans an item | Scan is queued locally (IndexedDB) |
+| Queue badge shows count | Red badge in header shows pending scans |
+| Connection restores | Queue auto-syncs, badge clears, tasks refresh |
 
-## Usage
+#### Common issues
 
-### Scanning UI
+| Issue | Cause | Resolution |
+|---|---|---|
+| "You do not have permission" | User missing Warehouse Technician role | Go to User > Roles, add the role |
+| Scan rejected with capacity error | Bin Capacity set and would be exceeded | Use a different bin, or increase capacity |
+| "Bin mismatch" during pick | Scanned bin ≠ suggested bin | Verify the correct bin, or update the bin suggestion |
+| Queue not syncing | Session may have expired | Refresh the page and log in again |
+| No Putaway Tasks appearing | No Purchase Receipts submitted | Submit a PR in the Desk first |
+| No Pick Tasks appearing | No Work Orders or Material Requests | Submit a WO or MR in the Desk first |
 
-Access the scanning UI at:
+---
 
-```
-https://your-site/scan
-```
+### Architecture Reference
 
-The interface has 3 tabs at the bottom:
-
-#### 📥 Putaway View
-
-1. Open tasks appear automatically
-2. Tap a task card to expand its items
-3. Tap **Scan Bin** on an unscanned item
-4. Scan or type the bin barcode → **Confirm**
-5. Item is recorded and bin stock is updated
-6. Progress bar shows completion
-
-#### 📤 Pick View
-
-1. Open pick tasks appear (auto-created from Work Orders / Material Requests)
-2. Filter by warehouse using the search bar
-3. Tap a task card to expand items with suggested bins
-4. Tap **Pick** on an item
-5. Scan the bin barcode → system validates it matches the suggested bin
-6. Bin stock is deducted
-7. Progress bar shows completion
-
-#### 🔍 Lookup View
-
-1. Scan or type an item code or batch number
-2. Summary cards show total quantity, bin count, and entries
-3. Table lists every bin with stock for that item/batch
-
-### Offline Mode
-
-When the device is offline:
-1. A **Offline** badge appears in the header
-2. Scan actions are queued locally (IndexedDB)
-3. A red badge shows the queue count
-4. When connection restores, the queue auto-syncs
-5. Synced tasks are automatically refreshed
-
-## Architecture
-
-### Data Flow
+#### Data Flow Diagram
 
 ```
                     ┌──────────────────┐
@@ -145,11 +305,13 @@ When the device is offline:
                     │  (Pending)       │
                     └────────┬─────────┘
                              │ Technician scans bin
+                             │ (capacity enforced)
                              ▼
                     ┌──────────────────┐
                     │  Item Batch Bin  │ ← Stock added (+qty)
                     │  Stock           │
                     └──────────────────┘
+
 
                     ┌──────────────────┐
                     │  Work Order /    │
@@ -159,7 +321,7 @@ When the device is offline:
                              ▼
                     ┌──────────────────┐
                     │  Pick Task       │
-                    │  (Pending)       │
+                    │  (FEFO bins)     │
                     └────────┬─────────┘
                              │ Technician picks from bin
                              ▼
@@ -169,62 +331,102 @@ When the device is offline:
                     └──────────────────┘
 ```
 
-### Doctypes
+#### Doctypes
 
-| Doctype | Type | Purpose |
+| Doctype | Type | Purpose | Key Fields |
+|---|---|---|---|
+| Bin Location | Master | Physical rack/bin | Warehouse, Zone, Rack, Bin Code, Capacity, Is Active |
+| Putaway Task | Document | Receive-to-bin task | Purchase Receipt, Warehouse, Status |
+| Putaway Task Item | Child | Items to bin | Item, Batch, Qty, Suggested Bin, Actual Bin, Scanned |
+| Pick Task | Document | Pick-from-bin task | Work Order, Material Request, Warehouse, Status |
+| Pick Task Item | Child | Items to pick | Item, Batch, Qty, From Bin, To Warehouse, Scanned |
+| Bin Pick List Item | Child | General pick record | Item, Batch, Qty, From Bin, Source Document |
+| Item Batch Bin Stock | Balance | (item,batch,warehouse,bin) → qty | Item, Batch, Warehouse, Bin, Qty |
+| Bin Stock Ledger Entry | Ledger | Immutable audit trail | Item, Batch, Warehouse, Bin, Qty Change, Voucher |
+
+#### Event Hooks
+
+| Document | Event | Handler | Effect |
+|---|---|---|---|
+| Purchase Receipt | on_submit | `events.purchase_receipt.create_putaway_tasks` | Creates Putaway Tasks per warehouse |
+| Stock Entry | before_submit | `events.stock_entry.validate_bin_pick` | Validates bin qty ≥ issue qty |
+| Stock Entry | on_submit | `events.stock_entry.update_bin_ledger` | Deducts from bin ledger |
+| Stock Entry | on_cancel | `events.stock_entry.reverse_bin_ledger` | Reverses bin deduction |
+| Pick List | validate | `events.pick_list.suggest_bins` | FEFO bin suggestion |
+| Work Order | on_submit | `events.work_order.create_pick_tasks` | Creates Pick Tasks |
+| Material Request | on_submit | `events.material_request.create_pick_tasks` | Creates Pick Tasks |
+
+#### API Endpoints (locked to roles)
+
+| Endpoint | Method | Roles Required |
 |---|---|---|
-| Bin Location | Master | Physical rack/bin locations |
-| Putaway Task | Document | Receive-to-bin task |
-| Putaway Task Item | Child Table | Items within a putaway task |
-| Pick Task | Document | Pick-from-bin task |
-| Pick Task Item | Child Table | Items within a pick task |
-| Bin Pick List Item | Child Table | General-purpose bin pick record |
-| Item Batch Bin Stock | Document | Running balance at (item, batch, warehouse, bin) |
-| Bin Stock Ledger Entry | Document | Immutable audit trail |
+| `get_open_putaway_tasks` | POST | Stock Manager, Stock User, Warehouse Technician |
+| `get_putaway_task_detail` | POST | Same |
+| `scan_putaway_item` | POST | Same (enforces bin capacity) |
+| `get_open_pick_tasks` | POST | Same |
+| `get_pick_task_detail` | POST | Same |
+| `scan_pick_item` | POST | Same |
+| `lookup_bin_stock` | POST | Same |
 
-### Key Files
+All endpoints require a valid Frappe session. Role check is enforced server-side via `_require_role()`.
 
-| File | Purpose |
-|---|---|
-| `hooks.py` | App config, role definitions, event hook registration |
-| `api.py` | 9 whitelisted API endpoints for the scanning UI |
-| `utils.py` | Core ledger functions: `update_bin_balance`, `get_available_qty`, `get_bin_stock_summary` |
-| `www/scan.html` | Mobile scanning UI (single-page app, 3 views + offline queue) |
-| `events/purchase_receipt.py` | Creates Putaway Tasks on PR submit |
-| `events/stock_entry.py` | Validates bin qty, updates/reverses ledger |
-| `events/pick_list.py` | FEFO bin suggestion on Pick List validate |
-| `events/work_order.py` | Creates Pick Tasks from Work Order required items |
-| `events/material_request.py` | Creates Pick Tasks from Material Issue requests |
-| `fixtures/custom_field.json` | Custom fields on ERPNext doctypes |
+#### Permissions
 
-## Development
+| Role | Bin Location | Putaway Task | Pick Task | Item Stock | Ledger | Desk Access |
+|---|---|---|---|---|---|---|
+| **Warehouse Technician** | Read | R/W | R/W | Read | Read | ❌ |
+| **Stock User** | R/W/C | R/W/C | R/W/C | Read | Read | ✅ |
+| **Stock Manager** | Full | Full | Full | Read | Read | ✅ |
+| **System Manager** | — | — | — | Full | Full | ✅ |
 
-### Project structure
+---
+
+### Development Guide
+
+#### Project structure
 
 ```
 warehouse_binning/
 ├── warehouse_binning/
-│   ├── hooks.py, api.py, utils.py, patches.txt
-│   ├── events/            # ERPNext event handlers
-│   ├── fixtures/          # Custom field exports
-│   ├── www/               # Web-facing pages (scan.html)
-│   └── doctype/           # All custom doctypes
-└── pyproject.toml
+│   ├── __init__.py
+│   ├── hooks.py            # App config, roles, event registration
+│   ├── api.py              # Whitelisted endpoints (role-gated)
+│   ├── utils.py            # Core ledger + lookup functions
+│   ├── patches.txt         # Migration patch registry
+│   ├── patches/            # Data migration scripts
+│   ├── events/             # ERPNext event hook handlers
+│   ├── fixtures/           # Custom field JSON exports
+│   ├── www/                # Web-facing pages (scan.html)
+│   └── doctype/            # All custom doctypes
+├── .github/workflows/ci.yml
+├── pyproject.toml
+├── README.md
+└── license.txt
 ```
 
-### Adding a new doctype
+#### Adding a new doctype
 
 ```bash
 bench new-doctype DoctypeName --module "Warehouse Binning"
 ```
 
-Move the generated files to `warehouse_binning/warehouse_binning/doctype/doctype_name/`.
+Move generated files to `warehouse_binning/warehouse_binning/doctype/doctype_name/`.
 
-### Running migrations after changes
+#### Running migrations after changes
 
 ```bash
 bench --site your-site migrate
 ```
+
+#### Backfill patch (go-live only)
+
+```python
+bench --site your-site console
+>>> from warehouse_binning.warehouse_binning.patches.backfill_item_batch_bin_stock import execute
+>>> execute()
+```
+
+---
 
 ## License
 
