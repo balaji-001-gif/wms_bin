@@ -36,7 +36,7 @@ def create_pick_tasks(doc, method):
 
 			task.append("items", {
 				"item_code": row.item_code,
-				"batch_no": row.batch_no,
+				"batch_no": getattr(row, "batch_no", None),
 				"qty": row.qty,
 				"uom": row.uom,
 				"from_bin": suggested_bin,
