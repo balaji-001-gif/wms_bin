@@ -1,6 +1,5 @@
 import frappe
 from frappe.model.document import Document
-from warehouse_binning.utils import update_bin_balance
 
 
 class PickTask(Document):
@@ -21,7 +20,8 @@ class PickTask(Document):
 @frappe.whitelist()
 def mark_item_picked(task_name, row_name, from_bin=None, batch_no=None):
 	"""Called by the scanning UI when a technician confirms picking an item
-	from a bin. Updates the task row and deduces the bin stock.
+	from a bin. Updates the task row. Bin stock is deducted by the auto
+	Stock Entry (created in events/pick_task.py on Pick Task completion).
 	"""
 	task = frappe.get_doc("Pick Task", task_name)
 	target_row = None
@@ -38,17 +38,11 @@ def mark_item_picked(task_name, row_name, from_bin=None, batch_no=None):
 		frappe.throw(f"Row {row_name} not found on {task_name}")
 
 	task.save(ignore_permissions=True)
-	frappe.db.commit()  # explicit commit — GET requests may skip auto-commit
+	frappe.db.commit()
 
-	# Deduct from bin stock
-	update_bin_balance(
-		item_code=target_row.item_code,
-		batch_no=target_row.batch_no,
-		warehouse=task.warehouse,
-		bin_location=target_row.from_bin,
-		qty_change=-(target_row.qty),
-		voucher_type="Pick Task",
-		voucher_no=task.name,
-	)
-	frappe.db.commit()  # commit bin balance changes too
+	# NOTE: Bin stock is NOT deducted here. The auto Stock Entry
+	# (created in events/pick_task.py when the Pick Task completes)
+	# handles the bin stock deduction via Stock Entry's on_submit
+	# (update_bin_ledger hook). Deducting here would cause a double
+	# deduction when the Stock Entry is submitted.
 	return task
