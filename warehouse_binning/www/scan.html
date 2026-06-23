@@ -625,15 +625,20 @@
 
   /* ============================== API helper ============================== */
   async function call(method, args) {
-    const csrfToken = getCsrfToken();
-    const url = '/api/method/' + method;
-    const res = await fetch(url, {
+    var csrfToken = getCsrfToken();
+    var headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    };
+    // Only send CSRF token if we have a valid one
+    if (csrfToken && csrfToken !== '') {
+      headers['X-Frappe-CSRF-Token'] = csrfToken;
+    }
+    var url = '/api/method/' + method;
+    var res = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Frappe-CSRF-Token': csrfToken,
-        'Accept': 'application/json'
-      },
+      headers: headers,
       body: args ? JSON.stringify(args) : undefined
     });
     if (!res.ok) {
