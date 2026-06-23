@@ -696,9 +696,9 @@
     return handleResponse(res);
   }
 
-  // Smart mutation: try POST (with CSRF) first. If it fails with CSRF error,
-  // fall back to GET (which bypasses CSRF). This handles both cached and
-  // uncached page scenarios.
+  // Smart mutation: try POST (with CSRF) first. Frappe may return 404 for POST
+  // when the app isn't fully installed, or 403 when CSRF token is missing.
+  // Falls back to GET (which bypasses CSRF and works for all whitelisted methods).
   async function callMutation(method, args) {
     if (!navigator.onLine) {
       await queueScan(method, args);
@@ -709,34 +709,27 @@
       return await callPost(method, args);
     } catch (err) {
       var msg = err.message || '';
-      // If CSRF error (403) or network error, fall back to GET
-      if (msg.indexOf('CSRFToken') !== -1 ||
-          msg.indexOf('Invalid Request') !== -1 ||
-          msg.indexOf('Failed to fetch') !== -1 ||
+      console.log('POST failed for', method, '-', msg, '- trying GET fallback');
+      // Network errors → queue for later
+      if (msg.indexOf('Failed to fetch') !== -1 ||
           msg.indexOf('NetworkError') !== -1 ||
           err.name === 'TypeError') {
-        // For network errors, queue
-        if (msg.indexOf('Failed to fetch') !== -1 ||
-            msg.indexOf('NetworkError') !== -1 ||
-            err.name === 'TypeError') {
+        await queueScan(method, args);
+        return 'queued';
+      }
+      // All other errors (CSRF, 404, 403, etc.) → retry via GET
+      try {
+        return await call(method, args);
+      } catch (getErr) {
+        var getMsg = getErr.message || '';
+        console.log('GET also failed for', method, '-', getMsg);
+        if (getMsg.indexOf('Failed to fetch') !== -1 ||
+            getMsg.indexOf('NetworkError') !== -1) {
           await queueScan(method, args);
           return 'queued';
         }
-        // For CSRF errors, retry via GET
-        console.log('CSRF token unavailable, falling back to GET for', method);
-        try {
-          return await call(method, args);
-        } catch (getErr) {
-          var getMsg = getErr.message || '';
-          if (getMsg.indexOf('Failed to fetch') !== -1 ||
-              getMsg.indexOf('NetworkError') !== -1) {
-            await queueScan(method, args);
-            return 'queued';
-          }
-          throw getErr;
-        }
+        throw getErr;
       }
-      throw err;
     }
   }
 
