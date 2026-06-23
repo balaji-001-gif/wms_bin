@@ -18,5 +18,26 @@
 		"fieldtype": "Link",
 		"options": "Bin Location",
 		"insert_after": "s_warehouse"
+	},
+	{
+		"doctype": "Custom Field",
+		"name": "Pick Task-stock_entry_created",
+		"dt": "Pick Task",
+		"fieldname": "stock_entry_created",
+		"label": "Stock Entry Created",
+		"fieldtype": "Check",
+		"read_only": 1,
+		"insert_after": "status"
+	},
+	{
+		"doctype": "Custom Field",
+		"name": "Stock Entry-from_pick_task",
+		"dt": "Stock Entry",
+		"fieldname": "from_pick_task",
+		"label": "From Pick Task",
+		"fieldtype": "Link",
+		"options": "Pick Task",
+		"read_only": 1,
+		"insert_after": "naming_series"
 	}
 ]

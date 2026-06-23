@@ -58,7 +58,7 @@ def get_available_qty(item_code, batch_no, warehouse, bin_location):
 	) or 0
 
 
-def get_bin_stock_summary(item_code=None, batch_no=None, warehouse=None):
+def get_bin_stock_summary(item_code=None, batch_no=None, warehouse=None, bin_location=None):
 	"""Look up stock positions across bins. Returns a list of records with
 	bin_location, warehouse, batch_no, and qty. All parameters are optional
 	— omit item_code to see everything (useful for warehouse-wide views).
@@ -70,6 +70,8 @@ def get_bin_stock_summary(item_code=None, batch_no=None, warehouse=None):
 		filters["batch_no"] = batch_no
 	if warehouse:
 		filters["warehouse"] = warehouse
+	if bin_location:
+		filters["bin_location"] = bin_location
 
 	return frappe.get_all(
 		"Item Batch Bin Stock",

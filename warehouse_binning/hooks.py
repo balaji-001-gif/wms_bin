@@ -63,6 +63,9 @@ doc_events = {
 	"Pick List": {
 		"validate": "warehouse_binning.events.pick_list.suggest_bins"
 	},
+	"Pick Task": {
+		"on_update": "warehouse_binning.events.pick_task.auto_create_stock_entry"
+	},
 	"Work Order": {
 		"on_submit": "warehouse_binning.events.work_order.create_pick_tasks"
 	},

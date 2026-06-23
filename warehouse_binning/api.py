@@ -152,9 +152,10 @@ def scan_pick_item(task_name, row_name, from_bin=None):
 
 
 @frappe.whitelist()
-def lookup_bin_stock(item_code=None, batch_no=None, warehouse=None):
+def lookup_bin_stock(item_code=None, batch_no=None, warehouse=None, bin_location=None):
 	"""Traceability lookup: find where any item/batch is stored across bins.
-	All parameters are optional — narrow by item_code, batch_no, or warehouse.
+	All parameters are optional — narrow by item_code, batch_no, warehouse,
+	or bin_location.
 	"""
 	_require_role()
-	return get_bin_stock_summary(item_code=item_code, batch_no=batch_no, warehouse=warehouse)
+	return get_bin_stock_summary(item_code=item_code, batch_no=batch_no, warehouse=warehouse, bin_location=bin_location)

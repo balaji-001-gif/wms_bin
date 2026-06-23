@@ -929,9 +929,18 @@
             border:2px solid var(--gray-200);border-radius:8px;outline:none;width:120px;">
         <span style="font-size:14px;color:var(--gray-500);font-weight:500">qty to bin →</span>
       </div>` : ''}
+      ${!isPutaway ? `
+      <div class="scan-field" style="margin-bottom:10px">
+        <input type="text" id="scan-dialog-batch"
+          value="${escHtml(opts.batchNo || '')}" placeholder="Scan or type batch no…"
+          autocomplete="off"
+          style="flex:1;font-family:var(--font);font-size:16px;padding:12px;
+            border:2px solid var(--gray-200);border-radius:8px;outline:none;">
+        <span style="font-size:14px;color:var(--gray-500);font-weight:500">batch</span>
+      </div>` : ''}
       <div class="scan-field" style="margin-bottom:14px">
         <input type="text" id="scan-dialog-input"
-          placeholder="${isPutaway ? 'Scan or type bin code…' : 'Confirm bin code…'}"
+          placeholder="${isPutaway ? 'Scan or type bin code…' : 'Scan bin barcode…'}"
           autocomplete="off"
           style="flex:1;font-family:var(--font);font-size:16px;padding:12px;
             border:2px solid var(--gray-200);border-radius:8px;outline:none;">
@@ -947,6 +956,31 @@
 
     const binInput = dialog.querySelector('#scan-dialog-input');
     const qtyInput = dialog.querySelector('#scan-dialog-qty');
+    const batchInput = dialog.querySelector('#scan-dialog-batch');
+
+    // Auto-suggest batch when bin is scanned for pick
+    if (batchInput && !isPutaway) {
+      // Pre-fill batch from the Pick Task item if known
+      var lastBinLookup = '';
+      binInput.addEventListener('blur', function() {
+        var binVal = binInput.value.trim();
+        if (!binVal || binVal === lastBinLookup) return;
+        lastBinLookup = binVal;
+        // Look up what batches are in this bin for this item
+        call('warehouse_binning.api.lookup_bin_stock', {
+          item_code: opts.itemCode,
+          bin_location: binVal
+        }).then(function(results) {
+          if (results && results.length > 0 && !batchInput.value) {
+            var firstBatch = results[0].batch_no;
+            if (firstBatch) {
+              batchInput.value = firstBatch;
+              showToast('✓ Batch ' + firstBatch + ' auto-filled from bin', 'success');
+            }
+          }
+        }).catch(function() {});
+      });
+    }
 
     function close() {
       document.body.removeChild(overlay);
@@ -970,10 +1004,15 @@
         scanQty = parsed;
       }
 
+      var batchNo = opts.batchNo;
+      if (batchInput) {
+        batchNo = batchInput.value.trim() || opts.batchNo;
+      }
+
       if (opts.type === 'putaway') {
-        submitPutawayScan(opts.taskName, opts.rowName, binCode, scanQty, opts.batchNo, opts.buttonEl, close);
+        submitPutawayScan(opts.taskName, opts.rowName, binCode, scanQty, batchNo, opts.buttonEl, close);
       } else if (opts.type === 'pick') {
-        submitPickScan(opts.taskName, opts.rowName, opts.itemCode, opts.batchNo, opts.binLocation, binCode, opts.buttonEl, close);
+        submitPickScan(opts.taskName, opts.rowName, opts.itemCode, batchNo, opts.binLocation, binCode, opts.buttonEl, close);
       }
     }
 
@@ -985,11 +1024,17 @@
         if (e.key === 'Enter') { e.preventDefault(); binInput.focus(); }
       });
     }
+    if (batchInput) {
+      batchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); binInput.focus(); }
+      });
+    }
     dialog.querySelector('#scan-dialog-cancel').addEventListener('click', close);
     dialog.querySelector('#scan-dialog-confirm').addEventListener('click', submit);
 
-    // Auto-focus: qty first for putaway, bin code for pick
+    // Auto-focus: qty first for putaway, bin for pick
     if (qtyInput) setTimeout(() => qtyInput.focus(), 100);
+    else if (batchInput && !batchInput.value) setTimeout(() => batchInput.focus(), 100);
     else setTimeout(() => binInput.focus(), 100);
   }
 
