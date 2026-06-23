@@ -64,6 +64,8 @@ def get_putaway_task_detail(task_name):
 			"suggested_bin": row.suggested_bin,
 			"actual_bin": row.actual_bin,
 			"scanned": row.scanned,
+			"pending_qty": row.qty,  # after split, each row's whole qty is the pending amount
+			"source_row": row.source_row,
 		})
 	return {
 		"name": task.name,
@@ -77,13 +79,12 @@ def get_putaway_task_detail(task_name):
 
 
 @frappe.whitelist()
-def scan_putaway_item(task_name, row_name, actual_bin, batch_no=None):
+def scan_putaway_item(task_name, row_name, actual_bin, batch_no=None, qty=None):
 	"""Called by the scanning UI when a technician confirms where an item
-	physically landed. Updates the task row, then writes the bin-level
-	stock movement.
+	physically landed. Supports partial qty — pass `qty` for split-row scanning.
 	"""
 	_require_role()
-	return mark_item_scanned(task_name, row_name, actual_bin, batch_no)
+	return mark_item_scanned(task_name, row_name, actual_bin, batch_no=batch_no, qty=qty)
 
 
 # ---------------------------------------------------------------------------
