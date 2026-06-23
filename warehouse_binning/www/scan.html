@@ -628,13 +628,15 @@
 
   /* ============================== API helper ============================== */
   // Uses GET to bypass Frappe's CSRF check (Frappe only validates CSRF on POST).
-  // All @frappe.whitelist() methods accept GET params as query string.
+  // All @frappe.whitelist() methods accept GET params as query string identically
+  // to POST body params, so this is functionally equivalent for all our APIs.
   async function call(method, args) {
     var params = '';
     if (args) {
       var parts = [];
       for (var k in args) {
-        if (args[k] !== null && args[k] !== undefined && args[k] !== '') {
+        if (Object.prototype.hasOwnProperty.call(args, k) &&
+            args[k] !== null && args[k] !== undefined && args[k] !== '') {
           parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(args[k]));
         }
       }
@@ -1222,25 +1224,7 @@
     if (e.key === 'Enter') { e.preventDefault(); doLookup(); }
   });
 
-  /* ============================== CSRF Token ============================== */
-  function getCsrfToken() {
-    // First try the meta tag (rendered by Frappe template engine)
-    var meta = document.querySelector('meta[name="csrf-token"]');
-    if (meta) {
-      var token = meta.getAttribute('content');
-      // If template rendered correctly, token will be a hash (not raw Jinja)
-      if (token && token.charAt(0) !== '{') return token;
-    }
-    // Fallback: read from the csrf_token cookie that Frappe sets on login
-    var cookies = document.cookie.split(';');
-    for (var i = 0; i < cookies.length; i++) {
-      var c = cookies[i].trim();
-      if (c.indexOf('csrf_token=') === 0) {
-        return decodeURIComponent(c.substring(11));
-      }
-    }
-    return '';
-  }
+
 
   /* ============================== Offline Queue (IndexedDB) ============================== */
   const DB_NAME = 'warehouse_binning_queue';
