@@ -138,12 +138,12 @@ def get_pick_task_detail(task_name):
 
 
 @frappe.whitelist()
-def scan_pick_item(task_name, row_name, from_bin=None):
+def scan_pick_item(task_name, row_name, from_bin=None, batch_no=None):
 	"""Called by the scanning UI when a technician confirms picking an item
 	from a bin. Updates the task row and deduces bin stock.
 	"""
 	_require_role()
-	return mark_item_picked(task_name, row_name, from_bin)
+	return mark_item_picked(task_name, row_name, from_bin, batch_no=batch_no)
 
 
 # ---------------------------------------------------------------------------

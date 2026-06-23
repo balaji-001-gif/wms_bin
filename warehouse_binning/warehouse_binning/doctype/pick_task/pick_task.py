@@ -19,7 +19,7 @@ class PickTask(Document):
 
 
 @frappe.whitelist()
-def mark_item_picked(task_name, row_name, from_bin=None):
+def mark_item_picked(task_name, row_name, from_bin=None, batch_no=None):
 	"""Called by the scanning UI when a technician confirms picking an item
 	from a bin. Updates the task row and deduces the bin stock.
 	"""
@@ -30,6 +30,8 @@ def mark_item_picked(task_name, row_name, from_bin=None):
 			row.scanned = 1
 			if from_bin:
 				row.from_bin = from_bin
+			if batch_no:
+				row.batch_no = batch_no
 			target_row = row
 			break
 	if not target_row:

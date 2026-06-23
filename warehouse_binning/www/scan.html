@@ -1158,7 +1158,8 @@
       const result = await callMutation('warehouse_binning.api.scan_pick_item', {
         task_name: taskName,
         row_name: rowName,
-        from_bin: scannedBin
+        from_bin: scannedBin,
+        batch_no: batchNo || undefined
       });
 
       if (result === 'queued') {
