@@ -56,11 +56,17 @@ def auto_create_stock_entry(doc, method):
 			})
 
 		se.insert(ignore_permissions=True)
-		se.submit()
 
-		# Mark the Pick Task so we never create a duplicate
+		# Mark immediately (before submit) to prevent duplicate Stock Entries
+		# if submit fails for any reason.
 		frappe.db.set_value("Pick Task", doc.name, "stock_entry_created", 1)
 		frappe.db.commit()
+
+		# Submit with ignore_permissions — Warehouse Technicians who trigger
+		# this hook via scanning may not have explicit Submit permission on
+		# Stock Entry.
+		se.flags.ignore_permissions = True
+		se.submit()
 
 		frappe.msgprint(
 			_("Stock Entry {0} created and submitted from Pick Task {1}").format(
@@ -73,4 +79,11 @@ def auto_create_stock_entry(doc, method):
 		frappe.log_error(
 			title="Auto Stock Entry from Pick Task failed",
 			message=f"Pick Task: {doc.name}\n{str(e)}",
+		)
+		frappe.msgprint(
+			_("Auto Stock Entry from Pick Task {0} failed. Check Error Log for details.").format(
+				doc.name
+			),
+			alert=True,
+			indicator="red",
 		)
