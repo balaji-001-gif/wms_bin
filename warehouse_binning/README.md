@@ -107,13 +107,42 @@ Current usage: 800, trying to add: 250.
 
 Leave capacity **blank** for bins that have no limit (e.g., bulk storage areas).
 
-### □ 4. Print bin labels
+### □ 4. Print barcode labels
 
-1. Print the **Bin Code** for each location as a barcode label
-2. Affix labels to the physical racks
+The app ships a **Bin Location Label** print format that generates a small label (62mm x 29mm) with:
+- Warehouse name
+- Bin location name in large text
+- Code128 barcode of the bin name
+- Zone / Rack info
+
+**To print labels for all bins:**
+
+1. Go to **Warehouse Binning > Bin Location**
+2. Select the bins you want to label (check the boxes)
+3. Click **Menu > Print > Bin Location Label**
+4. Select your label printer
+
+**To print a single label:**
+
+1. Open a **Bin Location** record
+2. Click **Print > Bin Location Label**
+3. Select your label printer
+
+Print on adhesive label sheets (Avery L7160 or similar) or direct thermal labels.
+
+> The `fixtures/print_format.json` is installed automatically on `bench migrate`. If you don't see the print format, run `bench --site your-site migrate` again.
+
+**Naming convention reminder:** `{Warehouse}-{BinCode}` → e.g. `Stores - W-A-01-001`
+
+### □ 5. Affix labels to physical racks
+
+1. Print all labels
+2. Walk the warehouse and affix each label to its corresponding physical rack/bin
 3. Verify each label is readable by your scanner device
 
-### □ 5. Verify scanning UI access
+### □ 6. Verify scanning UI access
+
+### □ 7. Verify scanning UI access
 
 1. Log in as a **Warehouse Technician** user
 2. Open: `https://your-site/scan`

@@ -15,6 +15,10 @@ fixtures = [
 		"dt": "Custom Field",
 		"filters": [["dt", "in", ["Pick List Item", "Stock Entry Detail"]]],
 	},
+	{
+		"dt": "Print Format",
+		"filters": [["name", "in", ["Bin Location Label"]]],
+	},
 ]
 
 # Roles shipped with this app. Frappe creates them on `bench migrate`.
