@@ -1,0 +1,15 @@
+{
+ "doctype": "Report",
+ "is_standard": "Yes",
+ "name": "Stock Movement Ledger",
+ "module": "Warehouse Binning",
+ "ref_doctype": "Bin Stock Ledger Entry",
+ "report_name": "Stock Movement Ledger",
+ "report_type": "Script Report",
+ "roles": [
+  {"role": "Stock Manager"},
+  {"role": "Stock User"},
+  {"role": "Warehouse Technician"},
+  {"role": "System Manager"}
+ ]
+}

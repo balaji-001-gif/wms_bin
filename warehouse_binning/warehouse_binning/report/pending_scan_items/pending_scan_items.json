@@ -1,0 +1,15 @@
+{
+ "doctype": "Report",
+ "is_standard": "Yes",
+ "name": "Pending Scan Items",
+ "module": "Warehouse Binning",
+ "ref_doctype": "Putaway Task",
+ "report_name": "Pending Scan Items",
+ "report_type": "Script Report",
+ "roles": [
+  {"role": "Stock Manager"},
+  {"role": "Stock User"},
+  {"role": "Warehouse Technician"},
+  {"role": "System Manager"}
+ ]
+}

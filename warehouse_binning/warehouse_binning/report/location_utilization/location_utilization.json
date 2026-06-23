@@ -1,0 +1,15 @@
+{
+ "doctype": "Report",
+ "is_standard": "Yes",
+ "name": "Location Utilization",
+ "module": "Warehouse Binning",
+ "ref_doctype": "Bin Location",
+ "report_name": "Location Utilization",
+ "report_type": "Script Report",
+ "roles": [
+  {"role": "Stock Manager"},
+  {"role": "Stock User"},
+  {"role": "Warehouse Technician"},
+  {"role": "System Manager"}
+ ]
+}

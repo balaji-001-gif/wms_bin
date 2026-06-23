@@ -19,6 +19,16 @@ fixtures = [
 		"dt": "Print Format",
 		"filters": [["name", "in", ["Bin Location Label"]]],
 	},
+	{
+		"dt": "Report",
+		"filters": [["name", "in", [
+			"Bin Stock Report",
+			"Putaway Task Status",
+			"Stock Movement Ledger",
+			"Pending Scan Items",
+			"Location Utilization"
+		]]],
+	},
 ]
 
 # Roles shipped with this app. Frappe creates them on `bench migrate`.

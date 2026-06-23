@@ -1,0 +1,15 @@
+{
+ "doctype": "Report",
+ "is_standard": "Yes",
+ "name": "Bin Stock Report",
+ "module": "Warehouse Binning",
+ "ref_doctype": "Item Batch Bin Stock",
+ "report_name": "Bin Stock Report",
+ "report_type": "Script Report",
+ "roles": [
+  {"role": "Stock Manager"},
+  {"role": "Stock User"},
+  {"role": "Warehouse Technician"},
+  {"role": "System Manager"}
+ ]
+}
