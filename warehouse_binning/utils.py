@@ -95,3 +95,46 @@ def get_bin_current_usage(bin_location, warehouse):
 def get_bin_capacity(bin_location):
 	"""Return the capacity of a bin location, or None if not set."""
 	return frappe.db.get_value("Bin Location", bin_location, "capacity")
+
+
+def get_barcode_svg(value, barcode_type="code128", height=30):
+	"""Generate a barcode SVG string for use in print formats.
+
+	Uses the python-barcode library (Code128 by default). Returns an
+	inline SVG element as a string, safe to embed in HTML print formats.
+
+	Args:
+		value: The data to encode (e.g. bin location name, item code).
+		barcode_type: Symbology (code128, ean13, qr, etc.)
+		height: Height of the barcode in pixels.
+
+	Returns:
+		str: SVG markup for the barcode, or empty string on failure.
+	"""
+	if not value:
+		return ""
+	try:
+		from io import BytesIO
+
+		import barcode
+		from barcode.writer import SVGWriter
+
+		writer = SVGWriter()
+		writer.set_options({
+			"module_height": height / 60.0 if height else 0.5,
+			"module_width": 0.25,
+			"font_size": 1,
+			"text_distance": 0,
+			"quiet_zone": 2,
+			"write_text": False,
+			"background": "white",
+			"foreground": "black",
+		})
+
+		code = barcode.get(barcode_type, value, writer=writer)
+		buf = BytesIO()
+		code.write(buf)
+		return buf.getvalue().decode("utf-8")
+	except Exception:
+		frappe.log_error(f"Barcode generation failed for {value}", "Warehouse Binning")
+		return f"<!-- barcode failed for {value} -->"

@@ -32,6 +32,15 @@ roles = [
 # This is the entire coupling surface to erpnext. No monkeypatching, no
 # subclassing erpnext controllers — just subscribing to lifecycle events
 # Frappe fires on documents, including ones owned by another app.
+# Barcode rendering for print formats. Registers get_barcode_svg as a
+# Jinja global so print format templates can call {{ get_barcode_svg(value) }}
+# to generate inline Code128 (or other) barcode SVGs.
+jinja = {
+	"methods": [
+		"warehouse_binning.utils.get_barcode_svg",
+	]
+}
+
 doc_events = {
 	"Purchase Receipt": {
 		"on_submit": "warehouse_binning.events.purchase_receipt.create_putaway_tasks"

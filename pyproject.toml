@@ -4,7 +4,9 @@ authors = [{ name = "Your Company" }]
 description = "Bin-level putaway and pick tracking layered on top of ERPNext"
 requires-python = ">=3.10"
 dynamic = ["version"]
-dependencies = []
+dependencies = [
+	"python-barcode>=0.15.1",
+]
 
 [build-system]
 requires = ["flit_core>=3.4,<4"]
