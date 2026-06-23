@@ -43,9 +43,8 @@ def auto_create_stock_entry(doc, method):
 			s_warehouse = doc.warehouse
 			t_warehouse = row.to_warehouse if purpose == "Material Transfer for Manufacture" else None
 
-			se.append("items", {
+			item_data = {
 				"item_code": row.item_code,
-				"batch_no": row.batch_no,
 				"qty": row.qty,
 				"s_warehouse": s_warehouse,
 				"t_warehouse": t_warehouse,
@@ -53,7 +52,43 @@ def auto_create_stock_entry(doc, method):
 				"uom": row.uom,
 				"stock_uom": row.uom or frappe.db.get_value("Item", row.item_code, "stock_uom"),
 				"conversion_factor": 1,
-			})
+			}
+
+			# In ERPNext v15+, batch-tracked items require a Serial and Batch
+			# Bundle instead of setting batch_no directly on the Stock Entry
+			# Detail row.  Create one when the Pick Task row has a batch.
+			if row.batch_no:
+				# Determine transaction type based on warehouse setup
+				if s_warehouse and t_warehouse:
+					sbb_type = "Material Transfer"
+				elif s_warehouse:
+					sbb_type = "Outward"
+				else:
+					sbb_type = "Inward"
+
+				# qty sign: Outward is negative (stock leaving), Inward and
+				# Material Transfer are positive (stock arriving or moving).
+				entry_qty = -abs(row.qty) if sbb_type == "Outward" else abs(row.qty)
+
+				sbb = frappe.get_doc({
+					"doctype": "Serial and Batch Bundle",
+					"item_code": row.item_code,
+					"warehouse": s_warehouse or t_warehouse,
+					"company": se.company,
+					"posting_date": se.posting_date,
+					"type_of_transaction": sbb_type,
+					"entries": [{
+						"batch_no": row.batch_no,
+						"qty": entry_qty,
+					}],
+				})
+				sbb.insert(ignore_permissions=True)
+				item_data["serial_and_batch_bundle"] = sbb.name
+			else:
+				# Non-batch items — no SBB needed
+				item_data["batch_no"] = None
+
+			se.append("items", item_data)
 
 		se.insert(ignore_permissions=True)
 
