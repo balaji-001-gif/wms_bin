@@ -1,6 +1,7 @@
 [
 	{
 		"doctype": "Custom Field",
+		"name": "Pick List Item-bin_location",
 		"dt": "Pick List Item",
 		"fieldname": "bin_location",
 		"label": "Bin Location",
@@ -10,6 +11,7 @@
 	},
 	{
 		"doctype": "Custom Field",
+		"name": "Stock Entry Detail-bin_location",
 		"dt": "Stock Entry Detail",
 		"fieldname": "bin_location",
 		"label": "Bin Location",
