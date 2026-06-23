@@ -95,6 +95,7 @@ def mark_item_scanned(task_name, row_name, actual_bin, batch_no=None, qty=None):
 		target_row.batch_no = batch_no
 
 	task.save(ignore_permissions=True)
+	frappe.db.commit()  # explicit commit — GET requests may skip auto-commit
 
 	update_bin_balance(
 		item_code=target_row.item_code,
@@ -105,4 +106,5 @@ def mark_item_scanned(task_name, row_name, actual_bin, batch_no=None, qty=None):
 		voucher_type="Putaway Task",
 		voucher_no=task.name,
 	)
+	frappe.db.commit()  # commit bin balance changes too
 	return task

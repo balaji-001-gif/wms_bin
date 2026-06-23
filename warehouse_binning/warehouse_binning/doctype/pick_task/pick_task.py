@@ -36,6 +36,7 @@ def mark_item_picked(task_name, row_name, from_bin=None):
 		frappe.throw(f"Row {row_name} not found on {task_name}")
 
 	task.save(ignore_permissions=True)
+	frappe.db.commit()  # explicit commit — GET requests may skip auto-commit
 
 	# Deduct from bin stock
 	update_bin_balance(
@@ -47,4 +48,5 @@ def mark_item_picked(task_name, row_name, from_bin=None):
 		voucher_type="Pick Task",
 		voucher_no=task.name,
 	)
+	frappe.db.commit()  # commit bin balance changes too
 	return task
