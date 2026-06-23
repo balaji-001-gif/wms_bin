@@ -626,10 +626,8 @@
     toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
   }
 
-  /* ============================== API helper ============================== */
-  // Uses GET to bypass Frappe's CSRF check (Frappe only validates CSRF on POST).
-  // All @frappe.whitelist() methods accept GET params as query string identically
-  // to POST body params, so this is functionally equivalent for all our APIs.
+  /* ============================== API helpers ============================== */
+  // GET for read-only operations — Frappe skips CSRF validation on GET.
   async function call(method, args) {
     var params = '';
     if (args) {
@@ -659,10 +657,10 @@
     return data.message;
   }
 
-  /**
-   * Try to call the API. If offline, queue the scan locally for later sync.
-   * Returns 'queued' when offline, otherwise returns the API response.
-   */
+  // GET for all API calls — Frappe's @frappe.whitelist() accepts GET params
+  // the same as POST body, and GET bypasses CSRF validation entirely.
+  // Mutations (scan_putaway_item, scan_pick_item) also use GET.
+  // If offline, queue the scan locally for later sync.
   async function callOrQueue(method, args) {
     if (!navigator.onLine) {
       await queueScan(method, args);
@@ -925,13 +923,11 @@
       if (result === 'queued') {
         showToast('📦 Queued — will sync when online', 'success');
         buttonEl.textContent = '⏳';
-        buttonEl.disabled = true;
-        close();
       } else {
         showToast('✓ Scanned to ' + binCode, 'success');
-        close();
-        setTimeout(() => loadPutawayTasks(), 300);
       }
+      close();
+      setTimeout(() => loadPutawayTasks(), 300);
     } catch (err) {
       buttonEl.disabled = false;
       buttonEl.textContent = 'Scan Bin';
@@ -1037,13 +1033,11 @@
       if (result === 'queued') {
         showToast('📦 Queued — will sync when online', 'success');
         buttonEl.textContent = '⏳';
-        buttonEl.disabled = true;
-        close();
       } else {
         showToast('✓ Picked ' + itemCode + ' from ' + scannedBin, 'success');
-        close();
-        setTimeout(() => loadPickTasks(), 300);
       }
+      close();
+      setTimeout(() => loadPickTasks(), 300);
     } catch (err) {
       buttonEl.disabled = false;
       buttonEl.textContent = 'Pick';
