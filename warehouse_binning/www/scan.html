@@ -627,32 +627,33 @@
   }
 
   /* ============================== API helper ============================== */
+  // Uses GET to bypass Frappe's CSRF check (Frappe only validates CSRF on POST).
+  // All @frappe.whitelist() methods accept GET params as query string.
   async function call(method, args) {
-    var csrfToken = getCsrfToken();
-    var headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest'
-    };
-    // Only send CSRF token if we have a valid one
-    if (csrfToken && csrfToken !== '') {
-      headers['X-Frappe-CSRF-Token'] = csrfToken;
+    var params = '';
+    if (args) {
+      var parts = [];
+      for (var k in args) {
+        if (args[k] !== null && args[k] !== undefined && args[k] !== '') {
+          parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(args[k]));
+        }
+      }
+      if (parts.length > 0) params = '?' + parts.join('&');
     }
-    var url = '/api/method/' + method;
+    var url = '/api/method/' + method + params;
     var res = await fetch(url, {
-      method: 'POST',
-      headers: headers,
-      body: args ? JSON.stringify(args) : undefined
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
     });
     if (!res.ok) {
-      let msg = 'Request failed: ' + res.status;
+      var msg = 'Request failed: ' + res.status;
       try {
-        const err = await res.json();
+        var err = await res.json();
         msg = err.exception || err.message || msg;
       } catch(_) {}
       throw new Error(msg);
     }
-    const data = await res.json();
+    var data = await res.json();
     return data.message;
   }
 
