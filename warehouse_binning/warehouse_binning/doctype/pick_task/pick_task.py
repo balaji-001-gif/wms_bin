@@ -22,6 +22,10 @@ def mark_item_picked(task_name, row_name, from_bin=None, batch_no=None):
 	"""Called by the scanning UI when a technician confirms picking an item
 	from a bin. Updates the task row. Bin stock is deducted by the auto
 	Stock Entry (created in events/pick_task.py on Pick Task completion).
+
+	If batch_no is not provided but from_bin is, looks up the batch from
+	the scanned bin's stock — this handles the common case where a barcode
+	scanner fires Enter before the frontend's async auto-suggest can respond.
 	"""
 	task = frappe.get_doc("Pick Task", task_name)
 	target_row = None
@@ -32,6 +36,22 @@ def mark_item_picked(task_name, row_name, from_bin=None, batch_no=None):
 				row.from_bin = from_bin
 			if batch_no:
 				row.batch_no = batch_no
+			elif from_bin and not row.batch_no:
+				# Barcode scanner fired Enter before frontend auto-suggest;
+				# look up the batch from the scanned bin's stock.
+				existing = frappe.db.get_value(
+					"Item Batch Bin Stock",
+					{
+						"item_code": row.item_code,
+						"warehouse": task.warehouse,
+						"bin_location": from_bin,
+						"qty": [">", 0],
+					},
+					"batch_no",
+					order_by="qty desc",
+				)
+				if existing:
+					row.batch_no = existing
 			target_row = row
 			break
 	if not target_row:

@@ -26,20 +26,21 @@ def create_pick_tasks(doc, method):
 		task.status = "Pending"
 
 		for row in rows:
-			# Suggest best bin
-			suggested_bin = frappe.db.get_value(
+			# Suggest best bin and batch from stock (same as Work Order flow)
+			stock = frappe.db.get_value(
 				"Item Batch Bin Stock",
 				{"item_code": row.item_code, "warehouse": warehouse, "qty": [">", 0]},
-				"bin_location",
+				["bin_location", "batch_no"],
 				order_by="qty desc",
+				as_dict=True,
 			)
 
 			task.append("items", {
 				"item_code": row.item_code,
-				"batch_no": getattr(row, "batch_no", None),
+				"batch_no": getattr(row, "batch_no", None) or (stock.batch_no if stock else None),
 				"qty": row.qty,
 				"uom": row.uom,
-				"from_bin": suggested_bin,
+				"from_bin": stock.bin_location if stock else None,
 				"to_warehouse": warehouse,
 				"source_row": row.name,
 			})
