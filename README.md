@@ -29,7 +29,7 @@
 | **Warehouse Manager** | Setup bin locations, configure capacities, review reports, investigate discrepancies |
 | **Warehouse Technician** | Daily scanning — putaway incoming goods, pick material for production/issues |
 | **Procurement Team** | Submit Purchase Receipts (triggers putaway tasks automatically) |
-| **Production Team** | Submit Work Orders / Material Requests (triggers pick tasks automatically) |
+| **Production Team** | Submit Work Orders / create Stock Entries in Draft (triggers pick tasks automatically) |
 | **IT / Super User** | Install the app, assign roles, run go-live backfill, troubleshoot |
 
 ---
@@ -211,15 +211,15 @@ Technician scans bin
 
 | Team | Action | System |
 |---|---|---|
-| **Production** | Submit a Work Order or Material Request in the Desk | ERPNext |
+| **Production / Stores** | Create a Stock Entry (Draft) or submit a Work Order in the Desk | ERPNext |
 | **Warehouse Technician** | Pick items from bins using the scanning UI | Warehouse Binning |
 
 ### How pick tasks are created
 
-| If you submit this... | This happens... |
+| If you do this... | This happens... |
 |---|---|
-| **Work Order** (status Planned or Material Requested) | Pick Task created per source warehouse, bins suggested using **FEFO** (earliest-expiring batch first) |
-| **Material Request** (type: Material Issue) | Pick Task created per warehouse, bins suggested using FEFO |
+| **Save a Stock Entry** (Material Issue / Material Transfer for Manufacture) as **Draft** | Pick Task created per source warehouse, bins and batches suggested from stock |
+| **Submit a Work Order** (status Planned or Material Requested) | Draft Stock Entry created, then Pick Task created from it — both linked together |
 
 ### Step-by-step: Warehouse Technician
 
@@ -227,30 +227,45 @@ Technician scans bin
 2. Tap the **📤 Pick** tab
 3. (Optional) Filter by warehouse using the search bar
 4. Open Pick Tasks appear with:
-   - Reference number (WO-xxxx / MR-xxxx)
+   - Reference number (SE-xxxx / WO-xxxx)
    - Warehouse
    - Status badge: Pending / Partially Completed / Completed
    - Progress bar
 
 5. Tap a task to expand items
 6. For each item:
-   - Go to the **suggested bin** (the system picks the bin with the earliest-expiring batch)
+   - Go to the **suggested bin** — the system suggests the bin with the most stock
+   - The **batch** is auto-suggested based on the bin's contents
    - Tap **Pick**
    - Scan or type the bin barcode
 
    > **Bin validation:** The scanned bin must match the suggested bin. If it doesn't match, the scan is rejected.
 
-7. ✅ The row updates to **Picked**, bin stock is deducted
+7. ✅ The row updates to **Picked**, batch is captured from the scan
 8. When all items are picked, the task status changes to **Completed**
 
-### After picking: create the Stock Entry
+### After picking: Stock Entry is submitted automatically
 
-1. Go to the **Frappe Desk**
-2. Create a **Stock Entry** (Material Issue or Material Transfer for Manufacture)
-3. The `bin_location` field on each item row is pre-filled with the bin from which the item was picked
-4. Submit the Stock Entry
+When all items in the Pick Task are scanned, the system **automatically**:
 
-**Behind the scenes:** On submit, the system validates the bin still has enough quantity and updates the bin ledger.
+1. Updates the linked Draft Stock Entry with the **actual bin location and batch** from the Pick Task
+2. Creates a **Serial and Batch Bundle** (ERPNext v15+) for batch-tracked items
+3. **Submits** the Stock Entry
+
+**Behind the scenes:**
+- The Stock Entry's `bin_location` is set to the scanned bin
+- The batch is linked via a Serial and Batch Bundle
+- `validate_bin_pick` ensures the bin had enough stock at pick time
+- `update_bin_ledger` deducts the quantity from `Item Batch Bin Stock`
+
+### ⚠️ If auto-submit fails
+
+If the auto-submit encounters an error, you can **manually trigger** it:
+
+- **In the scanning UI:** Open the completed Pick Task → tap **📄 Submit Stock Entry**
+- **In the Desk:** Open the Pick Task → click **Submit Stock Entry** action button
+
+Errors are logged to **Error Log** in the Desk under "Auto Stock Entry from Pick Task failed".
 
 ---
 
@@ -289,7 +304,7 @@ Open **Warehouse Binning** module in the Frappe Desk to access these reports:
 |---|---|---|
 | **Bin Location** list | All bins with warehouse, zone, rack, capacity, active status | Warehouse Manager |
 | **Putaway Task** list | All putaway tasks with status, warehouse, creation date, linked PR | Warehouse Manager |
-| **Pick Task** list | All pick tasks with status, warehouse, linked WO/MR | Warehouse Manager |
+| **Pick Task** list | All pick tasks with status, warehouse, linked SE/WO | Warehouse Manager |
 | **Item Batch Bin Stock** list | Complete inventory — every item+batch+bin with current qty | Stock Manager |
 | **Bin Stock Ledger Entry** list | Complete audit trail — every qty change with timestamp and voucher | Auditor / Stock Manager |
 
@@ -354,7 +369,7 @@ This app does **not send email/SMS notifications**. Instead, alerts are built in
 | `"Bin X capacity would be exceeded"` | Bin Capacity is set and would be exceeded | Use a different bin, or ask Warehouse Manager to increase capacity on the Bin Location |
 | `"Bin mismatch"` during pick | Scanned bin ≠ suggested bin from the Pick Task | Double-check the physical bin — if it's correct, the Pick Task may have wrong bin; ask manager to update |
 | No tasks on Putaway tab | No Purchase Receipts submitted recently | Submit a PR in the Desk first |
-| No tasks on Pick tab | No Work Orders or Material Requests submitted | Submit a WO or MR in the Desk first |
+| No tasks on Pick tab | No Draft Stock Entries or Work Orders with pending picks | Create a Stock Entry (Material Issue) as Draft, or submit a Work Order first |
 | Lookup shows no results | Item not yet in any bin | If item has stock in ERPNext, run the backfill patch. If new, receive it via Purchase Receipt first |
 | Offline badge won't clear after reconnecting | Session may have expired or browser cache issue | Refresh the page and log in again |
 
@@ -427,12 +442,19 @@ This app does **not send email/SMS notifications**. Instead, alerts are built in
      └──────────────────────────┘
 
 
-     Work Order / Material Request
-          │ on_submit
+     Stock Entry (Draft) / Work Order
+          │ after_insert / on_submit
           ▼
      ┌────────────┐
-     │ Pick Task  │  ← FEFO bin suggestion
+     │ Pick Task  │  ← Suggested bin + batch from stock
      └──────┬─────┘
+            │  Technician scans all items
+            │  status → "Completed"
+            ▼
+     ┌──────────────────┐
+     │ Stock Entry      │  ← Updated with actual bin + batch
+     │ → auto submitted  │     Serial & Batch Bundle created
+     └──────────────────┘
             │
             ▼
      ┌──────────────────────────┐
@@ -458,14 +480,15 @@ This app does **not send email/SMS notifications**. Instead, alerts are built in
 | File | Purpose |
 |---|---|
 | `hooks.py` | App config, role registration, event hook wiring |
-| `api.py` | 7 whitelisted API endpoints (role-protected) |
+| `api.py` | Whitelisted API endpoints (role-protected) |
 | `utils.py` | Bin balance lookups, capacity checks |
 | `www/scan.html` | Production scanning UI (Putaway / Pick / Lookup) |
 | `events/purchase_receipt.py` | Auto-create Putaway Task on PR submit |
 | `events/pick_list.py` | FEFO bin suggestion on Pick List validate |
-| `events/work_order.py` | Auto-create Pick Task on WO submit |
-| `events/material_request.py` | Auto-create Pick Task on MR submit |
-| `events/stock_entry.py` | Validate and update bin ledger on Stock Entry |
+| `events/work_order.py` | Auto-create Draft Stock Entry + Pick Task on WO submit |
+| ~~`events/material_request.py`~~ | *(removed — use Stock Entry Draft flow instead)* |
+| `events/pick_task.py` | Auto-submit linked Stock Entry when Pick Task completes |
+| `events/stock_entry.py` | Auto-create Pick Task from Draft SE, validate bin pick, update bin ledger |
 | `patches/backfill_item_batch_bin_stock.py` | Go-live data migration |
 
 ### API endpoints
@@ -478,6 +501,7 @@ This app does **not send email/SMS notifications**. Instead, alerts are built in
 | `get_open_pick_tasks` | List pending pick tasks | Scanning UI Pick tab |
 | `get_pick_task_detail` | Get items for a pick task | Scanning UI (task card) |
 | `scan_pick_item` | Mark item as picked (bin validation) | Scanning UI scan dialog |
+| `submit_pick_task_stock_entry` | Manually trigger Stock Entry submission for a completed Pick Task | Scanning UI Submit button / Desk action |
 | `lookup_bin_stock` | Search by item/batch for all bins | Scanning UI Lookup tab |
 
 All endpoints require a valid Frappe session AND one of: Stock Manager, Stock User, or Warehouse Technician role.
