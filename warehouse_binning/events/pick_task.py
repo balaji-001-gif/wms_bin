@@ -99,6 +99,9 @@ def auto_create_stock_entry(doc, method, raise_on_error=False):
 					"company": se.company,
 					"posting_date": se.posting_date or frappe.utils.today(),
 					"type_of_transaction": sbb_type,
+					"voucher_type": "Stock Entry",
+					"voucher_no": se.name,
+					"voucher_detail_no": se_row.name,
 					"entries": [{
 						"batch_no": row.batch_no,
 						"qty": entry_qty,
