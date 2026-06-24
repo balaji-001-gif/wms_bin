@@ -19,15 +19,24 @@ def auto_create_stock_entry(doc, method):
 	"""
 	if doc.status != "Completed":
 		return
-	if not doc.stock_entry:
+	if not doc.items:
 		return
 	if doc.get("stock_entry_created"):
 		return
-	if not doc.items:
-		return
 
 	# Find the linked Draft Stock Entry
-	se = frappe.get_doc("Stock Entry", doc.stock_entry)
+	se_name = doc.stock_entry
+	if not se_name:
+		# Fallback: the 'stock_entry' field on Pick Task may not exist in
+		# the DB yet if 'bench migrate' hasn't been run.  Look up the SE
+		# by its 'from_pick_task' custom field instead.
+		se_name = frappe.db.get_value(
+			"Stock Entry", {"from_pick_task": doc.name}
+		)
+	if not se_name:
+		return  # No linked Stock Entry found
+
+	se = frappe.get_doc("Stock Entry", se_name)
 	if se.docstatus != 0:  # Not in Draft — already submitted or cancelled
 		return
 
@@ -114,11 +123,11 @@ def auto_create_stock_entry(doc, method):
 	except Exception as e:
 		frappe.log_error(
 			title="Auto Stock Entry from Pick Task failed",
-			message=f"Pick Task: {doc.name}, Stock Entry: {doc.stock_entry}\n{str(e)}",
+			message=f"Pick Task: {doc.name}, Stock Entry: {se_name}\n{str(e)}",
 		)
 		frappe.msgprint(
 			_("Auto submit of Stock Entry {0} from Pick Task {1} failed. Check Error Log for details.").format(
-				doc.stock_entry, doc.name
+				se_name, doc.name
 			),
 			alert=True,
 			indicator="red",
