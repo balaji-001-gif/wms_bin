@@ -3,62 +3,73 @@ from frappe import _
 
 
 def auto_create_stock_entry(doc, method):
-	"""On Pick Task save (on_update), if status just became 'Completed' and no
-	Stock Entry has been created yet, auto-generate and submit one.
+	"""On Pick Task save (on_update), if status just became 'Completed',
+	find the linked Draft Stock Entry and submit it.
 
-	For Pick Tasks linked to a Material Request → creates a Material Issue SE.
-	For Pick Tasks linked to a Work Order → creates a Material Transfer for
-	Manufacture SE.  This automates the "pick from bins → issue to production
-	or to the requesting party" workflow so floor staff never need to touch the
-	Desk after scanning.
+	The Pick Task is created from a Draft Stock Entry (via the
+	create_pick_task_from_se hook in events/stock_entry.py) or from a
+	Work Order (via events/work_order.py).  When the technician finishes
+	scanning, this hook updates the Draft SE items with the actual batch
+	and bin info from the Pick Task, creates Serial and Batch Bundles
+	where needed, then submits the SE.
+
+	This replaces the old flow where a new SE was created on Pick Task
+	completion.  Now the SE exists in Draft from the start and the Pick
+	Task just fulfills it.
 	"""
 	if doc.status != "Completed":
+		return
+	if not doc.stock_entry:
 		return
 	if doc.get("stock_entry_created"):
 		return
 	if not doc.items:
 		return
 
-	# Determine Stock Entry purpose
-	if doc.material_request:
-		purpose = "Material Issue"
-	elif doc.work_order:
-		purpose = "Material Transfer for Manufacture"
-	else:
+	# Find the linked Draft Stock Entry
+	se = frappe.get_doc("Stock Entry", doc.stock_entry)
+	if se.docstatus != 0:  # Not in Draft — already submitted or cancelled
 		return
 
 	try:
-		se = frappe.new_doc("Stock Entry")
-		se.stock_entry_type = purpose
-		se.from_pick_task = doc.name
-		se.purpose = purpose
-		se.posting_date = frappe.utils.today()
-		se.company = frappe.db.get_value(
-			"Warehouse", doc.warehouse, "company"
-		) or frappe.defaults.get_company_default("company")
+		# Build a map of SE item name → SE item row for matching
+		se_item_map = {}
+		for se_row in se.items:
+			if se_row.name:
+				se_item_map[se_row.name] = se_row
 
+		# Update SE items with batch/bin info from scanned Pick Task rows
 		for row in doc.items:
 			if not row.scanned:
 				continue
-			s_warehouse = doc.warehouse
-			t_warehouse = row.to_warehouse if purpose == "Material Transfer for Manufacture" else None
 
-			item_data = {
-				"item_code": row.item_code,
-				"qty": row.qty,
-				"s_warehouse": s_warehouse,
-				"t_warehouse": t_warehouse,
-				"bin_location": row.from_bin,
-				"uom": row.uom,
-				"stock_uom": row.uom or frappe.db.get_value("Item", row.item_code, "stock_uom"),
-				"conversion_factor": 1,
-			}
+			# Match Pick Task row to SE item by source_row (stores the
+			# SE item's name from creation time)
+			se_row = se_item_map.get(row.source_row)
+			if not se_row:
+				# Fallback: match by item_code + qty
+				se_row = next(
+					(r for r in se.items if r.item_code == row.item_code and r.qty == row.qty),
+					None,
+				)
+			if not se_row:
+				continue
 
-			# In ERPNext v15+, batch-tracked items require a Serial and Batch
-			# Bundle instead of setting batch_no directly on the Stock Entry
-			# Detail row.  Create one when the Pick Task row has a batch.
+			# Update bin location from where the technician actually picked
+			if row.from_bin:
+				se_row.bin_location = row.from_bin
+
+			# For batch-tracked items: create a Serial and Batch Bundle
+			# (ERPNext v15+) instead of setting batch_no directly
 			if row.batch_no:
-				# Determine transaction type based on warehouse setup
+				# Keep batch_no on the item row for validation
+				# (validate_bin_pick checks it) while the SBB handles
+				# the actual stock ledger in v15+.
+				se_row.batch_no = row.batch_no
+
+				s_warehouse = se_row.s_warehouse
+				t_warehouse = se_row.t_warehouse
+
 				if s_warehouse and t_warehouse:
 					sbb_type = "Material Transfer"
 				elif s_warehouse:
@@ -66,16 +77,14 @@ def auto_create_stock_entry(doc, method):
 				else:
 					sbb_type = "Inward"
 
-				# qty sign: Outward is negative (stock leaving), Inward and
-				# Material Transfer are positive (stock arriving or moving).
-				entry_qty = -abs(row.qty) if sbb_type == "Outward" else abs(row.qty)
+				entry_qty = -abs(se_row.qty) if sbb_type == "Outward" else abs(se_row.qty)
 
 				sbb = frappe.get_doc({
 					"doctype": "Serial and Batch Bundle",
 					"item_code": row.item_code,
 					"warehouse": s_warehouse or t_warehouse,
 					"company": se.company,
-					"posting_date": se.posting_date,
+					"posting_date": se.posting_date or frappe.utils.today(),
 					"type_of_transaction": sbb_type,
 					"entries": [{
 						"batch_no": row.batch_no,
@@ -83,41 +92,33 @@ def auto_create_stock_entry(doc, method):
 					}],
 				})
 				sbb.insert(ignore_permissions=True)
-				item_data["serial_and_batch_bundle"] = sbb.name
-			else:
-				# Non-batch items — no SBB needed
-				item_data["batch_no"] = None
+				se_row.serial_and_batch_bundle = sbb.name
 
-			se.append("items", item_data)
+		# Save the SE with updated items
+		se.flags.ignore_permissions = True
+		se.save()
 
-		se.insert(ignore_permissions=True)
-
-		# Mark immediately (before submit) to prevent duplicate Stock Entries
-		# if submit fails for any reason.
+		# Mark on Pick Task before submit to prevent duplicates
 		frappe.db.set_value("Pick Task", doc.name, "stock_entry_created", 1)
 		frappe.db.commit()
 
-		# Submit with ignore_permissions — Warehouse Technicians who trigger
-		# this hook via scanning may not have explicit Submit permission on
-		# Stock Entry.
+		# Submit the Stock Entry
 		se.flags.ignore_permissions = True
 		se.submit()
 
 		frappe.msgprint(
-			_("Stock Entry {0} created and submitted from Pick Task {1}").format(
-				se.name, doc.name
-			),
+			_("Stock Entry {0} submitted from Pick Task {1}").format(se.name, doc.name),
 			alert=True,
 		)
 
 	except Exception as e:
 		frappe.log_error(
 			title="Auto Stock Entry from Pick Task failed",
-			message=f"Pick Task: {doc.name}\n{str(e)}",
+			message=f"Pick Task: {doc.name}, Stock Entry: {doc.stock_entry}\n{str(e)}",
 		)
 		frappe.msgprint(
-			_("Auto Stock Entry from Pick Task {0} failed. Check Error Log for details.").format(
-				doc.name
+			_("Auto submit of Stock Entry {0} from Pick Task {1} failed. Check Error Log for details.").format(
+				doc.stock_entry, doc.name
 			),
 			alert=True,
 			indicator="red",

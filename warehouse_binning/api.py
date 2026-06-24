@@ -102,7 +102,7 @@ def get_open_pick_tasks(warehouse=None):
 	return frappe.get_all(
 		"Pick Task",
 		filters=filters,
-		fields=["name", "warehouse", "status", "posting_date", "work_order", "material_request"],
+		fields=["name", "warehouse", "status", "posting_date", "stock_entry", "work_order", "material_request"],
 		order_by="posting_date desc",
 	)
 
@@ -129,6 +129,7 @@ def get_pick_task_detail(task_name):
 		"name": task.name,
 		"warehouse": task.warehouse,
 		"warehouse_name": frappe.db.get_value("Warehouse", task.warehouse, "warehouse_name"),
+		"stock_entry": task.stock_entry,
 		"work_order": task.work_order,
 		"material_request": task.material_request,
 		"status": task.status,

@@ -7,6 +7,7 @@
 	"engine": "InnoDB",
 	"field_order": [
 		"naming_series",
+		"stock_entry",
 		"work_order",
 		"material_request",
 		"warehouse",
@@ -21,6 +22,13 @@
 			"label": "Series",
 			"options": "PICK-.YYYY.-",
 			"default": "PICK-.YYYY.-"
+		},
+		{
+			"fieldname": "stock_entry",
+			"fieldtype": "Link",
+			"label": "Stock Entry",
+			"options": "Stock Entry",
+			"in_list_view": 1
 		},
 		{
 			"fieldname": "work_order",

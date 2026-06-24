@@ -56,6 +56,7 @@ doc_events = {
 		"on_submit": "warehouse_binning.events.purchase_receipt.create_putaway_tasks"
 	},
 	"Stock Entry": {
+		"after_insert": "warehouse_binning.events.stock_entry.create_pick_task_from_se",
 		"before_submit": "warehouse_binning.events.stock_entry.validate_bin_pick",
 		"on_submit": "warehouse_binning.events.stock_entry.update_bin_ledger",
 		"on_cancel": "warehouse_binning.events.stock_entry.reverse_bin_ledger",
@@ -68,8 +69,5 @@ doc_events = {
 	},
 	"Work Order": {
 		"on_submit": "warehouse_binning.events.work_order.create_pick_tasks"
-	},
-	"Material Request": {
-		"on_submit": "warehouse_binning.events.material_request.create_pick_tasks"
 	},
 }

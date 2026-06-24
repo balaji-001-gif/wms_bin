@@ -1081,8 +1081,8 @@
       let html = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <span style="font-size:13px;color:var(--gray-500)">
-            ${detail.work_order ? 'WO: <strong>' + escHtml(detail.work_order) + '</strong>' : ''}
-            ${detail.material_request ? 'MR: <strong>' + escHtml(detail.material_request) + '</strong>' : ''}
+            ${detail.stock_entry ? 'SE: <strong>' + escHtml(detail.stock_entry) + '</strong>' : ''}
+            ${detail.work_order ? '· WO: <strong>' + escHtml(detail.work_order) + '</strong>' : ''}
           </span>
           <span style="font-size:13px;color:var(--gray-500)">${scannedCount}/${total} picked</span>
         </div>
@@ -1203,10 +1203,10 @@
         const statusClass = task.status === 'Completed' ? 'badge-completed'
           : task.status === 'Partially Completed' ? 'badge-partial'
           : 'badge-pending';
-        const reference = task.work_order
+        var reference = task.stock_entry
+          ? 'SE: ' + task.stock_entry
+          : task.work_order
           ? 'WO: ' + task.work_order
-          : task.material_request
-          ? 'MR: ' + task.material_request
           : '';
         html += `
           <div class="card">
