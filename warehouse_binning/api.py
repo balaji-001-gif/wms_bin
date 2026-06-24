@@ -1,6 +1,6 @@
 import frappe
 from warehouse_binning.warehouse_binning.doctype.putaway_task.putaway_task import mark_item_scanned
-from warehouse_binning.warehouse_binning.doctype.pick_task.pick_task import mark_item_picked
+from warehouse_binning.warehouse_binning.doctype.pick_task.pick_task import mark_item_picked, submit_stock_entry_for_pick_task
 from warehouse_binning.utils import get_bin_stock_summary
 
 
@@ -150,6 +150,15 @@ def scan_pick_item(task_name, row_name, from_bin=None, batch_no=None):
 # ---------------------------------------------------------------------------
 # LOOKUP / TRACEABILITY
 # ---------------------------------------------------------------------------
+
+
+@frappe.whitelist()
+def submit_pick_task_stock_entry(task_name):
+	"""Called by the scanning UI to manually trigger Stock Entry submission
+	for a completed Pick Task.  Alternative to the automatic on_update hook.
+	"""
+	_require_role()
+	return submit_stock_entry_for_pick_task(task_name)
 
 
 @frappe.whitelist()

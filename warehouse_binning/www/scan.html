@@ -1111,8 +1111,7 @@
               <span class="badge ${scannedClass}" style="margin-top:4px">${scannedLabel}</span>
             </div>
             ${!item.scanned && hasBin ? `
-            <div class="item-action">
-              <button class="btn btn-success btn-sm scan-pick-btn"
+            <div class="item-action">				<button class="btn btn-success btn-sm scan-pick-btn"
                 data-task="${escHtml(detail.name)}"
                 data-row="${escHtml(item.name)}"
                 data-item="${escHtml(item.item_code)}"
@@ -1124,9 +1123,19 @@
           </div>`;
       }
 
-      bodyEl.innerHTML = html;
+      // Show a "Submit Stock Entry" button for completed tasks that
+      // haven't been submitted yet (auto-submit may have failed).
+      if (detail.status === 'Completed' && detail.stock_entry && pct === 100) {
+        html += `
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-200)">
+            <button class="btn btn-full btn-success submit-se-btn"
+              data-task="${escHtml(detail.name)}">
+              📄 Submit Stock Entry
+            </button>
+          </div>`;
+      }
 
-      // Attach pick scan handlers
+      bodyEl.innerHTML = html;		// Attach pick scan handlers
       bodyEl.querySelectorAll('.scan-pick-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           showScanDialog({
@@ -1138,6 +1147,27 @@
             binLocation: btn.dataset.bin,
             buttonEl: btn
           });
+        });
+      });
+
+      // Attach Submit Stock Entry button handler
+      bodyEl.querySelectorAll('.submit-se-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          btn.textContent = '⏳ Submitting…';
+          try {
+            const result = await callMutation('warehouse_binning.api.submit_pick_task_stock_entry', {
+              task_name: btn.dataset.task
+            });
+            showToast('✓ Stock Entry submitted!', 'success');
+            btn.textContent = '✅ Done';
+            // Reload after a moment
+            setTimeout(() => loadPickTasks(), 500);
+          } catch (err) {
+            btn.disabled = false;
+            btn.textContent = '📄 Submit Stock Entry';
+            showToast('✗ ' + err.message, 'error');
+          }
         });
       });
     } catch (err) {

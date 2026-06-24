@@ -66,3 +66,43 @@ def mark_item_picked(task_name, row_name, from_bin=None, batch_no=None):
 	# (update_bin_ledger hook). Deducting here would cause a double
 	# deduction when the Stock Entry is submitted.
 	return task
+
+
+@frappe.whitelist()
+def submit_stock_entry_for_pick_task(task_name):
+	"""Manually trigger the auto Stock Entry submission for a Pick Task.
+
+	Called from the Desk action button or from the scanning UI API when
+	the technician wants to manually complete the flow.  Returns a dict
+	with success/error info.
+	"""
+	from warehouse_binning.events.pick_task import auto_create_stock_entry
+
+	task = frappe.get_doc("Pick Task", task_name)
+
+	if task.status != "Completed":
+		frappe.throw(
+			f"Pick Task {task_name} is not Completed (status: {task.status}). "
+			"All items must be scanned first."
+		)
+
+	if task.get("stock_entry_created"):
+		frappe.throw(f"Stock Entry already created for Pick Task {task_name}.")
+
+	if not task.stock_entry:
+		frappe.throw(f"Pick Task {task_name} has no linked Stock Entry.")
+
+	# Call with raise_on_error=True so errors propagate to the API caller
+	# and are shown in the scanning UI / Desk form.
+	try:
+		auto_create_stock_entry(task, method=None, raise_on_error=True)
+		return {"success": True, "message": f"Stock Entry submitted from Pick Task {task_name}"}
+	except Exception as e:
+		frappe.log_error(
+			title="Manual Stock Entry submit from Pick Task failed",
+			message=f"Pick Task: {task_name}\n{str(e)}",
+		)
+		frappe.throw(
+			f"Failed to submit Stock Entry from Pick Task {task_name}. "
+			f"Error: {str(e)}. Check Error Log for details."
+		)

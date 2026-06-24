@@ -1,5 +1,10 @@
 {
-	"actions": [],
+	"actions": [
+	{
+		"label": "Submit Stock Entry",
+		"action": "submit_stock_entry_for_pick_task"
+	}
+],
 	"autoname": "naming_series:",
 	"creation": "2026-06-22 00:00:00.000000",
 	"doctype": "DocType",

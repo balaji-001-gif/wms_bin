@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 
 
-def auto_create_stock_entry(doc, method):
+def auto_create_stock_entry(doc, method, raise_on_error=False):
 	"""On Pick Task save (on_update), if status just became 'Completed',
 	find the linked Draft Stock Entry and submit it.
 
@@ -13,9 +13,10 @@ def auto_create_stock_entry(doc, method):
 	and bin info from the Pick Task, creates Serial and Batch Bundles
 	where needed, then submits the SE.
 
-	This replaces the old flow where a new SE was created on Pick Task
-	completion.  Now the SE exists in Draft from the start and the Pick
-	Task just fulfills it.
+	When raise_on_error=True (called from the manual action button),
+	exceptions propagate to the caller so the error can be shown to the
+	user.  When False (called from the on_update hook), exceptions are
+	caught and logged to Error Log so the scan operation completes.
 	"""
 	if doc.status != "Completed":
 		return
@@ -34,7 +35,10 @@ def auto_create_stock_entry(doc, method):
 			"Stock Entry", {"from_pick_task": doc.name}
 		)
 	if not se_name:
-		return  # No linked Stock Entry found
+		# When called manually, let the caller know there's no linked SE.
+		if raise_on_error:
+			frappe.throw(_("Pick Task {0} has no linked Stock Entry.").format(doc.name))
+		return
 
 	se = frappe.get_doc("Stock Entry", se_name)
 	if se.docstatus != 0:  # Not in Draft — already submitted or cancelled
@@ -132,3 +136,6 @@ def auto_create_stock_entry(doc, method):
 			alert=True,
 			indicator="red",
 		)
+		# When called manually, re-raise so the caller can show the error
+		if raise_on_error:
+			raise
