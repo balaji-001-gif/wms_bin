@@ -1,1576 +1,528 @@
 <!DOCTYPE html>
-<!--
-  Warehouse Binning — Technician Scanning Interface
-  ==================================================
-  Three views in one page: Putaway (receive-to-bin), Pick (issue-from-bin),
-  and Lookup (traceability). Designed for mobile/tablet use with barcode
-  scanner input — all scan fields auto-submit on Enter.
 
-  Auth: relies on Frappe's session handling. Accessible to any logged-in
-  user with Stock User / Stock Manager / Warehouse Technician role.
-
-  The Warehouse Technician role is shipped with this app and has no Desk
-  access — only the scanning UI. Assign it to floor staff via Role Profile
-  or User > Roles in the Desk.
--->
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-<meta name="csrf-token" content="{{ csrf_token }}">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏭</text></svg>">
-<title>Warehouse Scan</title>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Warehouse Scan | LOGI-CORE COMMAND</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=JetBrains+Mono:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#6ffbbe",
+                        "on-secondary": "#003824",
+                        "outline-variant": "#424754",
+                        "on-secondary-fixed-variant": "#005236",
+                        "surface": "#0b1326",
+                        "on-surface-variant": "#c2c6d6",
+                        "tertiary-fixed-dim": "#c4c7c9",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary": "#2d3133",
+                        "outline": "#8c909f",
+                        "surface-tint": "#adc6ff",
+                        "primary-container": "#4d8eff",
+                        "secondary-container": "#00a572",
+                        "surface-bright": "#31394d",
+                        "surface-container-lowest": "#060e20",
+                        "tertiary-container": "#8e9193",
+                        "error": "#ffb4ab",
+                        "surface-container-highest": "#2d3449",
+                        "background": "#0b1326",
+                        "on-secondary-container": "#00311f",
+                        "tertiary": "#c4c7c9",
+                        "on-tertiary-fixed": "#191c1e",
+                        "inverse-on-surface": "#283044",
+                        "surface-container-high": "#222a3d",
+                        "on-error": "#690005",
+                        "primary-fixed-dim": "#adc6ff",
+                        "on-primary-container": "#00285d",
+                        "on-primary": "#002e6a",
+                        "error-container": "#93000a",
+                        "primary-fixed": "#d8e2ff",
+                        "on-primary-fixed": "#001a42",
+                        "surface-container": "#171f33",
+                        "inverse-primary": "#005ac2",
+                        "secondary-fixed-dim": "#4edea3",
+                        "on-surface": "#dae2fd",
+                        "on-secondary-fixed": "#002113",
+                        "inverse-surface": "#dae2fd",
+                        "on-tertiary-fixed-variant": "#444749",
+                        "surface-variant": "#2d3449",
+                        "on-background": "#dae2fd",
+                        "surface-container-low": "#131b2e",
+                        "secondary": "#4edea3",
+                        "on-tertiary-container": "#272a2c",
+                        "primary": "#adc6ff",
+                        "surface-dim": "#0b1326",
+                        "on-primary-fixed-variant": "#004395",
+                        "tertiary-fixed": "#e0e3e5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "gutter": "12px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "lg": "24px",
+                        "xl": "40px",
+                        "md": "16px",
+                        "container-margin": "16px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
 <style>
-  /* ===================== Reset & Variables ===================== */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --green: #16a34a;
-    --green-bg: #dcfce7;
-    --amber: #d97706;
-    --amber-bg: #fef3c7;
-    --red: #dc2626;
-    --red-bg: #fee2e2;
-    --blue: #2563eb;
-    --blue-bg: #dbeafe;
-    --gray-50: #f9fafb;
-    --gray-100: #f3f4f6;
-    --gray-200: #e5e7eb;
-    --gray-300: #d1d5db;
-    --gray-400: #9ca3af;
-    --gray-500: #6b7280;
-    --gray-600: #4b5563;
-    --gray-700: #374151;
-    --gray-800: #1f2937;
-    --gray-900: #111827;
-    --white: #ffffff;
-    --radius: 10px;
-    --radius-sm: 6px;
-    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
-    --shadow-lg: 0 4px 12px rgba(0,0,0,.1);
-    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --safe-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  html, body {
-    height: 100%;
-    font-family: var(--font);
-    font-size: 16px;
-    line-height: 1.5;
-    color: var(--gray-900);
-    background: var(--gray-100);
-    -webkit-font-smoothing: antialiased;
-  }
-
-  /* ===================== Layout ===================== */
-  .app {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    max-width: 480px;
-    margin: 0 auto;
-    background: var(--white);
-    position: relative;
-    overflow: hidden;
-  }
-
-  /* Header */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    background: var(--gray-900);
-    color: var(--white);
-    flex-shrink: 0;
-    min-height: 52px;
-  }
-  .header h1 {
-    font-size: 18px;
-    font-weight: 600;
-    letter-spacing: -0.3px;
-  }
-  .header-badge {
-    font-size: 12px;
-    background: var(--blue);
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-weight: 500;
-  }
-  .header-badge.offline {
-    background: var(--amber);
-  }
-  .header-badge.syncing {
-    background: var(--blue);
-    animation: pulse 1s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .6; }
-  }
-  .header-badge.queue-count {
-    background: var(--red);
-    margin-left: 4px;
-  }
-
-  /* Main content area */
-  .main {
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 12px 16px 16px;
-    background: var(--gray-50);
-  }
-
-  /* ===================== Bottom Tab Bar ===================== */
-  .tab-bar {
-    display: flex;
-    flex-shrink: 0;
-    border-top: 1px solid var(--gray-200);
-    background: var(--white);
-    padding-bottom: var(--safe-bottom);
-  }
-  .tab-btn {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    padding: 8px 4px 6px;
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--gray-400);
-    background: none;
-    border: none;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: color .15s;
-  }
-  .tab-btn .tab-icon { font-size: 22px; line-height: 1; }
-  .tab-btn.active { color: var(--blue); }
-  .tab-btn:active { opacity: .7; }
-
-  /* ===================== Panels ===================== */
-  .panel { display: none; }
-  .panel.active { display: block; }
-
-  /* ===================== Cards ===================== */
-  .card {
-    background: var(--white);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    margin-bottom: 12px;
-    overflow: hidden;
-  }
-  .card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 14px;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-    border-bottom: 1px solid var(--gray-100);
-    transition: background .1s;
-  }
-  .card-header:active { background: var(--gray-50); }
-  .card-header .title { font-weight: 600; font-size: 15px; color: var(--gray-800); }
-  .card-header .sub {
-    font-size: 12px;
-    color: var(--gray-500);
-    margin-top: 1px;
-  }
-  .card-header .chevron {
-    font-size: 16px;
-    color: var(--gray-400);
-    transition: transform .2s;
-  }
-  .card-header.open .chevron { transform: rotate(180deg); }
-
-  .card-body { padding: 0 14px 14px; }
-  .card-body.collapsed { display: none; }
-
-  /* ===================== Status Badges ===================== */
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 20px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
-  .badge-pending    { background: var(--gray-100); color: var(--gray-600); }
-  .badge-partial    { background: var(--amber-bg);  color: var(--amber); }
-  .badge-completed  { background: var(--green-bg);  color: var(--green); }
-  .badge-scanned    { background: var(--green-bg);  color: var(--green); }
-  .badge-unscanned  { background: var(--red-bg);    color: var(--red); }
-  .badge-draft      { background: var(--blue-bg);   color: var(--blue); }
-  .badge-ok         { background: var(--green-bg);  color: var(--green); }
-  .badge-low        { background: var(--red-bg);    color: var(--red); }
-
-  /* ===================== Item Rows ===================== */
-  .item-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--gray-100);
-  }
-  .item-row:last-child { border-bottom: none; }
-
-  .item-info { flex: 1; min-width: 0; }
-  .item-info .item-code {
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--gray-800);
-  }
-  .item-info .item-name {
-    font-size: 12px;
-    color: var(--gray-500);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .item-info .item-meta {
-    font-size: 12px;
-    color: var(--gray-500);
-    margin-top: 2px;
-  }
-  .item-info .item-meta strong { color: var(--gray-700); }
-
-  .item-qty {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--gray-800);
-    text-align: right;
-    white-space: nowrap;
-  }
-  .item-qty .uom { font-size: 11px; font-weight: 400; color: var(--gray-400); }
-
-  .item-action {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
-
-  /* ===================== Buttons ===================== */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font-family: var(--font);
-    font-size: 14px;
-    font-weight: 600;
-    padding: 10px 18px;
-    border: none;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: all .12s;
-    min-height: 44px;
-    min-width: 44px;
-  }
-  .btn:active { transform: scale(.97); }
-  .btn-primary { background: var(--blue); color: var(--white); }
-  .btn-primary:hover { background: #1d4ed8; }
-  .btn-success { background: var(--green); color: var(--white); }
-  .btn-success:hover { background: #15803d; }
-  .btn-outline {
-    background: var(--white);
-    color: var(--gray-700);
-    border: 1.5px solid var(--gray-300);
-  }
-  .btn-outline:hover { border-color: var(--gray-400); }
-  .btn-sm {
-    font-size: 12px;
-    padding: 6px 12px;
-    min-height: 32px;
-  }
-  .btn-icon {
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border-radius: 50%;
-    font-size: 18px;
-  }
-  .btn-full { width: 100%; }
-
-  /* ===================== Scan Input ===================== */
-  .scan-field {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-  .scan-field input {
-    flex: 1;
-    font-family: var(--font);
-    font-size: 15px;
-    padding: 10px 12px;
-    border: 2px solid var(--gray-200);
-    border-radius: var(--radius-sm);
-    outline: none;
-    background: var(--white);
-    min-height: 44px;
-    transition: border-color .15s;
-  }
-  .scan-field input:focus {
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px var(--blue-bg);
-  }
-  .scan-field input::placeholder { color: var(--gray-400); }
-
-  /* ===================== Lookup Results ===================== */
-  .lookup-result {
-    background: var(--white);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-  }
-  .lookup-result table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-  .lookup-result th {
-    background: var(--gray-50);
-    text-align: left;
-    padding: 8px 10px;
-    font-weight: 600;
-    color: var(--gray-600);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid var(--gray-200);
-  }
-  .lookup-result td {
-    padding: 10px;
-    border-bottom: 1px solid var(--gray-100);
-    color: var(--gray-700);
-  }
-  .lookup-result tr:last-child td { border-bottom: none; }
-  .lookup-result .bin-link {
-    color: var(--blue);
-    font-weight: 600;
-    text-decoration: none;
-  }
-  .lookup-result .bin-link:hover { text-decoration: underline; }
-  .lookup-empty {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--gray-400);
-  }
-  .lookup-empty .icon { font-size: 40px; margin-bottom: 8px; }
-
-  /* ===================== Search Bar ===================== */
-  .search-bar {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-  .search-bar input {
-    flex: 1;
-    font-family: var(--font);
-    font-size: 15px;
-    padding: 10px 12px;
-    border: 2px solid var(--gray-200);
-    border-radius: var(--radius-sm);
-    outline: none;
-    background: var(--white);
-    min-height: 44px;
-    transition: border-color .15s;
-  }
-  .search-bar input:focus {
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px var(--blue-bg);
-  }
-
-  /* ===================== Loading & Empty ===================== */
-  .loading {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--gray-400);
-  }
-  .loading .spinner {
-    display: inline-block;
-    width: 28px;
-    height: 28px;
-    border: 3px solid var(--gray-200);
-    border-top-color: var(--blue);
-    border-radius: 50%;
-    animation: spin .7s linear infinite;
-    margin-bottom: 8px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .empty-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--gray-400);
-  }
-  .empty-state .icon { font-size: 40px; margin-bottom: 8px; }
-  .empty-state .text { font-size: 14px; }
-
-  /* ===================== Notification Toast ===================== */
-  .toast {
-    position: fixed;
-    bottom: calc(80px + var(--safe-bottom));
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--gray-900);
-    color: var(--white);
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 500;
-    box-shadow: var(--shadow-lg);
-    z-index: 100;
-    opacity: 0;
-    transition: opacity .25s;
-    pointer-events: none;
-    max-width: calc(100% - 32px);
-    text-align: center;
-  }
-  .toast.show { opacity: 1; }
-  .toast.success { background: var(--green); }
-  .toast.error { background: var(--red); }
-
-  /* ===================== Progress ===================== */
-  .progress-bar {
-    height: 4px;
-    background: var(--gray-200);
-    border-radius: 2px;
-    overflow: hidden;
-    margin: 8px 0;
-  }
-  .progress-bar .fill {
-    height: 100%;
-    background: var(--blue);
-    border-radius: 2px;
-    transition: width .3s;
-  }
-  .progress-bar .fill.complete { background: var(--green); }
-
-  /* ===================== Section Titles ===================== */
-  .section-title {
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--gray-500);
-    margin: 16px 0 8px;
-  }
-  .section-title:first-child { margin-top: 0; }
-
-  /* ===================== Empty scan state within a card ===================== */
-  .scan-prompt {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-    color: var(--gray-500);
-    font-size: 13px;
-  }
-  .scan-prompt .icon { font-size: 18px; }
-
-  /* ===================== Responsive for desktop ===================== */
-  @media (min-width: 768px) {
-    .app { max-width: 600px; border-radius: 12px; margin: 20px auto; height: calc(100% - 40px); box-shadow: var(--shadow-lg); }
-    body { background: var(--gray-200); }
-  }
-
-  /* ===================== Scan Highlight Animation ===================== */
-  @keyframes flash-green {
-    0%   { background: var(--green-bg); }
-    100% { background: transparent; }
-  }
-  .scan-flash {
-    animation: flash-green .6s ease-out;
-  }
-
-  /* Barcode scanner full-width input mode */
-  .scanner-mode .scan-field input {
-    font-size: 18px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-</style>
+        body {
+            background-color: #0b1326;
+            color: #dae2fd;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .scan-glow:focus-within {
+            box-shadow: 0 0 15px rgba(173, 198, 255, 0.25);
+            border-color: #adc6ff;
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #toast-container {
+            pointer-events: none;
+        }
+        .toast {
+            pointer-events: auto;
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body>
-
-<div class="app" id="app">
-
-  <!-- ========== HEADER ========== -->
-  <header class="header">
-    <h1>🏭 Warehouse Scan</h1>
-    <div style="display:flex;align-items:center;gap:4px">
-      <span class="header-badge" id="status-badge">Online</span>
-      <span class="header-badge queue-count" id="queue-badge" style="display:none">0</span>
-    </div>
-  </header>
-
-  <!-- ========== MAIN CONTENT ========== -->
-  <main class="main" id="main">
-
-    <!-- ======== PUTAWAY PANEL ======== -->
-    <div class="panel active" id="panel-putaway">
-      <div class="section-title">📥 Open Putaway Tasks</div>
-      <div id="putaway-list"></div>
-      <div class="empty-state" id="putaway-empty" style="display:none">
-        <div class="icon">✅</div>
-        <div class="text">No open putaway tasks</div>
-      </div>
-      <div class="loading" id="putaway-loading">
-        <div class="spinner"></div>
-        <div>Loading tasks…</div>
-      </div>
-    </div>
-
-    <!-- ======== PICK PANEL ======== -->
-    <div class="panel" id="panel-pick">
-      <div class="section-title">📤 Pending Pick Tasks</div>
-      <div class="search-bar" style="margin-bottom:12px">
-        <input type="text" id="pick-warehouse" placeholder="Filter by warehouse…" autocomplete="off" style="flex:1;font-family:var(--font);font-size:14px;padding:8px 10px;border:2px solid var(--gray-200);border-radius:var(--radius-sm);outline:none;min-height:40px">
-        <button class="btn btn-primary btn-sm" id="pick-filter-btn">Filter</button>
-        <button class="btn btn-outline btn-sm" id="pick-clear-btn">Clear</button>
-      </div>
-      <div id="pick-list"></div>
-      <div class="empty-state" id="pick-empty" style="display:none">
-        <div class="icon">📋</div>
-        <div class="text">No pending pick tasks</div>
-      </div>
-      <div class="loading" id="pick-loading">
-        <div class="spinner"></div>
-        <div>Loading pick tasks…</div>
-      </div>
-    </div>
-
-    <!-- ======== LOOKUP PANEL ======== -->
-    <div class="panel" id="panel-lookup">
-      <div class="section-title">🔍 Item / Batch Lookup</div>
-      <div class="search-bar">
-        <input type="text" id="lookup-input" placeholder="Scan or type item code / batch…" autocomplete="off">
-        <button class="btn btn-primary btn-sm" id="lookup-btn">Search</button>
-      </div>
-      <div id="lookup-results"></div>
-      <div class="loading" id="lookup-loading" style="display:none">
-        <div class="spinner"></div>
-        <div>Searching…</div>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- ========== TAB BAR ========== -->
-  <nav class="tab-bar" id="tab-bar">
-    <button class="tab-btn active" data-panel="putaway">
-      <span class="tab-icon">📥</span>
-      Putaway
-    </button>
-    <button class="tab-btn" data-panel="pick">
-      <span class="tab-icon">📤</span>
-      Pick
-    </button>
-    <button class="tab-btn" data-panel="lookup">
-      <span class="tab-icon">🔍</span>
-      Lookup
-    </button>
-  </nav>
-
-  <!-- ========== TOAST ========== -->
-  <div class="toast" id="toast"></div>
-</div>
-
+<body class="font-body-sm selection:bg-primary/30">
+<!-- Background Shader -->
+<!-- STITCH_SHADER_START:ANIMATION_1 class="fixed inset-0 w-full h-full -z-10" -->
+<div class="fixed inset-0 w-full h-full -z-10" style="display:block;">
+<canvas id="shader-canvas-ANIMATION_1" style="display:block;width:100%;height:100%"></canvas>
 <script>
 (function() {
-  'use strict';
+  const canvas = document.getElementById('shader-canvas-ANIMATION_1');
 
-  /* ============================== State ============================== */
-  const STATE = { activePanel: 'putaway' };
-
-  /* ============================== DOM refs ============================== */
-  const $ = (sel) => document.querySelector(sel);
-  const $$ = (sel) => document.querySelectorAll(sel);
-
-  const main         = $('#main');
-  const putawayList  = $('#putaway-list');
-  const putawayEmpty = $('#putaway-empty');
-  const putawayLoad  = $('#putaway-loading');
-  const pickList     = $('#pick-list');
-  const pickEmpty    = $('#pick-empty');
-  const pickLoad     = $('#pick-loading');
-  const lookupInput  = $('#lookup-input');
-  const lookupBtn    = $('#lookup-btn');
-  const lookupRes    = $('#lookup-results');
-  const lookupLoad   = $('#lookup-loading');
-  const toast        = $('#toast');
-  const statusBadge  = $('#status-badge');
-  const queueBadge   = $('#queue-badge');
-
-  /* ============================== Toast ============================== */
-  let toastTimer = null;
-  function showToast(msg, type) {
-    toast.textContent = msg;
-    toast.className = 'toast' + (type ? ' ' + type : '');
-    // force reflow so the transition plays
-    void toast.offsetWidth;
-    toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
-  }
-
-  /* ============================== API helpers ============================== */
-  // GET for read-only operations — Frappe skips CSRF validation on GET.
-  async function call(method, args) {
-    var params = buildQueryString(args);
-    var url = '/api/method/' + method + params;
-    var res = await fetch(url, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' }
-    });
-    return handleResponse(res);
-  }
-
-  // Build query string from args object, skipping null/undefined/empty
-  function buildQueryString(args) {
-    if (!args) return '';
-    var parts = [];
-    for (var k in args) {
-      if (Object.prototype.hasOwnProperty.call(args, k) &&
-          args[k] !== null && args[k] !== undefined && args[k] !== '') {
-        parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(args[k]));
-      }
-    }
-    return parts.length > 0 ? '?' + parts.join('&') : '';
-  }
-
-  // Parse JSON fetch response, throw on error
-  async function handleResponse(res) {
-    if (!res.ok) {
-      var msg = 'Request failed: ' + res.status;
-      try {
-        var err = await res.json();
-        msg = err.exception || err.message || msg;
-      } catch(_) {}
-      throw new Error(msg);
-    }
-    var data = await res.json();
-    return data.message;
-  }
-
-  // Get CSRF token from meta tag (rendered by Frappe template engine).
-  // Returns empty string if not available.
-  function getCsrfToken() {
-    var meta = document.querySelector('meta[name="csrf-token"]');
-    if (meta) {
-      var token = meta.getAttribute('content');
-      // Token is a real hash (not raw Jinja) if it doesn't start with {
-      if (token && token.charAt(0) !== '{') return token;
-    }
-    return '';
-  }
-
-  // POST for mutation operations. Uses CSRF token if available.
-  async function callPost(method, args) {
-    var csrfToken = getCsrfToken();
-    var headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-    if (csrfToken) {
-      headers['X-Frappe-CSRF-Token'] = csrfToken;
-    }
-    var url = '/api/method/' + method;
-    var res = await fetch(url, {
-      method: 'POST',
-      headers: headers,
-      body: args ? JSON.stringify(args) : undefined
-    });
-    return handleResponse(res);
-  }
-
-  // Smart mutation: try POST (with CSRF) first. Frappe may return 404 for POST
-  // when the app isn't fully installed, or 403 when CSRF token is missing.
-  // Falls back to GET (which bypasses CSRF and works for all whitelisted methods).
-  async function callMutation(method, args) {
-    if (!navigator.onLine) {
-      await queueScan(method, args);
-      return 'queued';
-    }
-    // Try POST first
-    try {
-      return await callPost(method, args);
-    } catch (err) {
-      var msg = err.message || '';
-      console.log('POST failed for', method, '-', msg, '- trying GET fallback');
-      // Network errors → queue for later
-      if (msg.indexOf('Failed to fetch') !== -1 ||
-          msg.indexOf('NetworkError') !== -1 ||
-          err.name === 'TypeError') {
-        await queueScan(method, args);
-        return 'queued';
-      }
-      // All other errors (CSRF, 404, 403, etc.) → retry via GET
-      try {
-        return await call(method, args);
-      } catch (getErr) {
-        var getMsg = getErr.message || '';
-        console.log('GET also failed for', method, '-', getMsg);
-        if (getMsg.indexOf('Failed to fetch') !== -1 ||
-            getMsg.indexOf('NetworkError') !== -1) {
-          await queueScan(method, args);
-          return 'queued';
-        }
-        throw getErr;
-      }
+  // Sync the WebGL drawing-buffer size with the CSS-driven layout size.
+  // This fires on initial layout and whenever the element is resized.
+  function syncSize() {
+    const w = canvas.clientWidth  || 1280;
+    const h = canvas.clientHeight || 720;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
     }
   }
-
-
-
-  /* ============================== Tab Switching ============================== */
-  $$('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const panel = btn.dataset.panel;
-      if (panel === STATE.activePanel) return;
-      STATE.activePanel = panel;
-
-      $$('.tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      $$('.panel').forEach(p => p.classList.remove('active'));
-      const panelEl = $('#panel-' + panel);
-      if (panelEl) panelEl.classList.add('active');
-
-      // Load data when tab is activated
-      if (panel === 'putaway') loadPutawayTasks();
-      else if (panel === 'pick') loadPickTasks();
-      else if (panel === 'lookup') { lookupInput.focus(); }
-    });
-  });
-
-  /* ============================== Putaway ============================== */
-  async function loadPutawayTasks() {
-    putawayList.innerHTML = '';
-    putawayEmpty.style.display = 'none';
-    putawayLoad.style.display = '';
-
-    try {
-      const tasks = await call('warehouse_binning.api.get_open_putaway_tasks');
-      putawayLoad.style.display = 'none';
-
-      if (!tasks || tasks.length === 0) {
-        putawayEmpty.style.display = '';
-        return;
-      }
-
-      let html = '';
-      for (const task of tasks) {
-        html += renderPutawayCard(task);
-      }
-      putawayList.innerHTML = html;
-
-      // Attach click handlers for card headers
-      putawayList.querySelectorAll('.card-header').forEach(hdr => {
-        hdr.addEventListener('click', () => {
-          const body = hdr.nextElementSibling;
-          if (!body) return;
-          hdr.classList.toggle('open');
-          body.classList.toggle('collapsed');
-
-          // Lazy-load details if not loaded yet
-          if (!body.classList.contains('collapsed') && body.dataset.loaded !== 'true') {
-            const taskName = hdr.dataset.task;
-            loadPutawayDetail(taskName, body);
-          }
-        });
-      });
-    } catch (err) {
-      putawayLoad.style.display = 'none';
-      showToast('Error: ' + err.message, 'error');
-    }
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncSize).observe(canvas);
   }
+  syncSize();
 
-  function renderPutawayCard(task) {
-    const statusClass = task.status === 'Completed' ? 'badge-completed'
-      : task.status === 'Partially Completed' ? 'badge-partial'
-      : 'badge-pending';
-    return `
-      <div class="card">
-        <div class="card-header" data-task="${escHtml(task.name)}">
-          <div>
-            <div class="title">${escHtml(task.name)}</div>
-            <div class="sub">${escHtml(task.warehouse)} · ${task.posting_date || ''}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="badge ${statusClass}">${task.status}</span>
-            <span class="chevron">▾</span>
-          </div>
-        </div>
-        <div class="card-body collapsed" data-loaded="false">
-          <div class="loading" style="padding:20px 0">
-            <div class="spinner"></div>
-          </div>
-        </div>
-      </div>`;
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
+  const vs = `attribute vec2 a_position;
+varying vec2 v_texCoord;
+void main() {
+  v_texCoord = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+  const fs = `precision highp float;
+uniform float u_time;
+uniform vec2 u_resolution;
+varying vec2 v_texCoord;
+
+void main() {
+    vec2 uv = v_texCoord;
+    
+    // Slow moving diagonal waves
+    float wave = sin(uv.x * 10.0 + uv.y * 5.0 + u_time * 0.5) * 0.5 + 0.5;
+    float wave2 = sin(uv.y * 8.0 - uv.x * 4.0 + u_time * 0.3) * 0.5 + 0.5;
+    
+    // Mix deep navy and charcoal
+    vec3 color1 = vec3(0.058, 0.09, 0.165); // Charcoal #0f172a
+    vec3 color2 = vec3(0.117, 0.16, 0.231); // Navy #1e293b
+    
+    vec3 finalColor = mix(color1, color2, wave * wave2);
+    
+    // Add subtle electric blue 'data' lines
+    float line = step(0.995, fract(uv.y * 20.0 + u_time * 0.1));
+    finalColor += line * vec3(0.23, 0.51, 0.96) * 0.2;
+    
+    gl_FragColor = vec4(finalColor, 1.0);
+}`;
+  function cs(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
   }
-
-  async function loadPutawayDetail(taskName, bodyEl) {
-    try {
-      const detail = await call('warehouse_binning.api.get_putaway_task_detail', { task_name: taskName });
-      bodyEl.dataset.loaded = 'true';
-
-      const total = detail.items.length;
-      const scanned = detail.items.filter(i => i.scanned).length;
-      const pct = total > 0 ? Math.round((scanned / total) * 100) : 0;
-
-      let html = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <span style="font-size:13px;color:var(--gray-500)">PR: <strong>${escHtml(detail.purchase_receipt)}</strong></span>
-          <span style="font-size:13px;color:var(--gray-500)">${scanned}/${total} scanned</span>
-        </div>
-        <div class="progress-bar">
-          <div class="fill ${pct === 100 ? 'complete' : ''}" style="width:${pct}%"></div>
-        </div>`;
-
-      for (const item of detail.items) {
-        const pendingQty = item.pending_qty !== undefined ? item.pending_qty : item.qty;
-        const scannedClass = item.scanned ? 'badge-scanned' : 'badge-unscanned';
-        const scannedLabel = item.scanned ? '✓ Scanned' : 'Pending';
-        html += `
-          <div class="item-row ${item.scanned ? 'scan-flash' : ''}">
-            <div class="item-info">
-              <div class="item-code">${escHtml(item.item_code)}</div>
-              <div class="item-name">${escHtml(item.item_name || '')}</div>
-              <div class="item-meta">
-                Batch: <strong>${escHtml(item.batch_no || '—')}</strong>
-                ${item.suggested_bin ? '· Suggest: <strong>' + escHtml(item.suggested_bin) + '</strong>' : ''}
-                ${item.actual_bin ? '· Bin: <strong>' + escHtml(item.actual_bin) + '</strong>' : ''}
-                ${item.source_row ? '· Split from: <strong>' + escHtml(item.source_row) + '</strong>' : ''}
-              </div>
-            </div>
-            <div style="text-align:right">
-              <div class="item-qty">${pendingQty} <span class="uom">${escHtml(item.uom || '')}</span></div>
-              <span class="badge ${scannedClass}" style="margin-top:4px">${scannedLabel}</span>
-            </div>
-            ${!item.scanned ? `
-            <div class="item-action">
-              <button class="btn btn-primary btn-sm scan-putaway-btn"
-                data-task="${escHtml(detail.name)}"
-                data-row="${escHtml(item.name)}"
-                data-item="${escHtml(item.item_code)}"
-                data-batch="${escHtml(item.batch_no || '')}"
-                data-pending-qty="${pendingQty}">
-                Scan Bin
-              </button>
-            </div>` : ''}
-          </div>`;
-      }
-
-      bodyEl.innerHTML = html;
-
-      // Attach putaway scan handlers
-      bodyEl.querySelectorAll('.scan-putaway-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          showScanDialog({
-            type: 'putaway',
-            taskName: btn.dataset.task,
-            rowName: btn.dataset.row,
-            itemCode: btn.dataset.item,
-            batchNo: btn.dataset.batch,
-            pendingQty: Number(btn.dataset.pendingQty),
-            buttonEl: btn
-          });
-        });
-      });
-    } catch (err) {
-      bodyEl.innerHTML = `<div style="padding:16px;color:var(--red);font-size:13px">Error: ${escHtml(err.message)}</div>`;
-    }
-  }
-
-  /* ============================== Scan Dialog ============================== */
-  function showScanDialog(opts) {
-    const overlay = document.createElement('div');
-    overlay.style.cssText = `
-      position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;
-      display:flex;align-items:center;justify-content:center;padding:20px;
-    `;
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-
-    const dialog = document.createElement('div');
-    dialog.style.cssText = `
-      background:var(--white);border-radius:14px;padding:24px;width:100%;
-      max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3);
-    `;
-
-    const title = opts.type === 'putaway' ? 'Scan Putaway Bin' : 'Scan Pick Confirmation';
-    const isPutaway = opts.type === 'putaway';
-    const pendingQty = Number(opts.pendingQty || opts.qty || 0);
-
-    dialog.innerHTML = `
-      <h3 style="font-size:18px;font-weight:600;margin-bottom:4px">${title}</h3>
-      <p style="font-size:13px;color:var(--gray-500);margin-bottom:16px">
-        ${escHtml(opts.itemCode)} · Batch: ${escHtml(opts.batchNo || '—')}
-        ${isPutaway ? ' · Remaining: <strong>' + pendingQty + '</strong>' : ''}
-      </p>
-      ${isPutaway ? `
-      <div class="scan-field" style="margin-bottom:10px">
-        <input type="number" id="scan-dialog-qty"
-          value="${pendingQty}" min="0.01" step="any"
-          autocomplete="off"
-          style="flex:1;font-family:var(--font);font-size:16px;padding:12px;
-            border:2px solid var(--gray-200);border-radius:8px;outline:none;width:120px;">
-        <span style="font-size:14px;color:var(--gray-500);font-weight:500">qty to bin →</span>
-      </div>` : ''}
-      ${!isPutaway ? `
-      <div class="scan-field" style="margin-bottom:10px">
-        <input type="text" id="scan-dialog-batch"
-          value="${escHtml(opts.batchNo || '')}" placeholder="Scan or type batch no…"
-          autocomplete="off"
-          style="flex:1;font-family:var(--font);font-size:16px;padding:12px;
-            border:2px solid var(--gray-200);border-radius:8px;outline:none;">
-        <span style="font-size:14px;color:var(--gray-500);font-weight:500">batch</span>
-      </div>` : ''}
-      <div class="scan-field" style="margin-bottom:14px">
-        <input type="text" id="scan-dialog-input"
-          placeholder="${isPutaway ? 'Scan or type bin code…' : 'Scan bin barcode…'}"
-          autocomplete="off"
-          style="flex:1;font-family:var(--font);font-size:16px;padding:12px;
-            border:2px solid var(--gray-200);border-radius:8px;outline:none;">
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-outline" id="scan-dialog-cancel" style="flex:1">Cancel</button>
-        <button class="btn btn-primary" id="scan-dialog-confirm" style="flex:1">Confirm</button>
-      </div>
-    `;
-
-    overlay.appendChild(dialog);
-    document.body.appendChild(overlay);
-
-    const binInput = dialog.querySelector('#scan-dialog-input');
-    const qtyInput = dialog.querySelector('#scan-dialog-qty');
-    const batchInput = dialog.querySelector('#scan-dialog-batch');
-
-    // Auto-suggest batch when bin is scanned for pick
-    if (batchInput && !isPutaway) {
-      // Pre-fill batch from the Pick Task item if known
-      var lastBinLookup = '';
-      binInput.addEventListener('blur', function() {
-        var binVal = binInput.value.trim();
-        if (!binVal || binVal === lastBinLookup) return;
-        lastBinLookup = binVal;
-        // Look up what batches are in this bin for this item
-        call('warehouse_binning.api.lookup_bin_stock', {
-          item_code: opts.itemCode,
-          bin_location: binVal
-        }).then(function(results) {
-          if (results && results.length > 0 && !batchInput.value) {
-            var firstBatch = results[0].batch_no;
-            if (firstBatch) {
-              batchInput.value = firstBatch;
-              showToast('✓ Batch ' + firstBatch + ' auto-filled from bin', 'success');
-            }
-          }
-        }).catch(function() {});
-      });
-    }
-
-    function close() {
-      document.body.removeChild(overlay);
-    }
-
-    function submit() {
-      const binCode = binInput.value.trim();
-      if (!binCode) { binInput.style.borderColor = 'var(--red)'; return; }
-
-      var scanQty = pendingQty;
-      if (qtyInput) {
-        var parsed = parseFloat(qtyInput.value);
-        if (isNaN(parsed) || parsed <= 0) {
-          qtyInput.style.borderColor = 'var(--red)';
-          return;
-        }
-        if (parsed > pendingQty) {
-          showToast('Qty cannot exceed ' + pendingQty, 'error');
-          return;
-        }
-        scanQty = parsed;
-      }
-
-      var batchNo = opts.batchNo;
-      if (batchInput) {
-        batchNo = batchInput.value.trim() || opts.batchNo;
-      }
-
-      if (opts.type === 'putaway') {
-        submitPutawayScan(opts.taskName, opts.rowName, binCode, scanQty, batchNo, opts.buttonEl, close);
-      } else if (opts.type === 'pick') {
-        submitPickScan(opts.taskName, opts.rowName, opts.itemCode, batchNo, opts.binLocation, binCode, opts.buttonEl, close);
-      }
-    }
-
-    binInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); submit(); }
-    });
-    if (qtyInput) {
-      qtyInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); binInput.focus(); }
-      });
-    }
-    if (batchInput) {
-      batchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); binInput.focus(); }
-      });
-    }
-    dialog.querySelector('#scan-dialog-cancel').addEventListener('click', close);
-    dialog.querySelector('#scan-dialog-confirm').addEventListener('click', submit);
-
-    // Auto-focus: qty first for putaway, bin for pick
-    if (qtyInput) setTimeout(() => qtyInput.focus(), 100);
-    else if (batchInput && !batchInput.value) setTimeout(() => batchInput.focus(), 100);
-    else setTimeout(() => binInput.focus(), 100);
-  }
-
-  async function submitPutawayScan(taskName, rowName, binCode, scanQty, batchNo, buttonEl, close) {
-    buttonEl.disabled = true;
-    buttonEl.textContent = '…';
-
-    try {
-      const result = await callMutation('warehouse_binning.api.scan_putaway_item', {
-        task_name: taskName,
-        row_name: rowName,
-        actual_bin: binCode,
-        qty: scanQty,
-        batch_no: batchNo || undefined
-      });
-
-      if (result === 'queued') {
-        showToast('📦 Queued — will sync when online', 'success');
-        buttonEl.textContent = '⏳';
-      } else {
-        showToast('✓ ' + scanQty + ' scanned to ' + binCode, 'success');
-      }
-      close();
-      setTimeout(() => loadPutawayTasks(), 300);
-    } catch (err) {
-      buttonEl.disabled = false;
-      buttonEl.textContent = 'Scan Bin';
-      showToast('✗ ' + err.message, 'error');
-    }
-  }
-
-  /* ============================== Pick ============================== */
-  async function loadPickDetail(taskName, bodyEl) {
-    try {
-      const detail = await call('warehouse_binning.api.get_pick_task_detail', {
-        task_name: taskName
-      });
-      bodyEl.dataset.loaded = 'true';
-
-      const total = detail.items.length;
-      const scannedCount = detail.items.filter(i => i.scanned).length;
-      const pct = total > 0 ? Math.round((scannedCount / total) * 100) : 0;
-
-      let html = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <span style="font-size:13px;color:var(--gray-500)">
-            ${detail.stock_entry ? 'SE: <strong>' + escHtml(detail.stock_entry) + '</strong>' : ''}
-            ${detail.work_order ? '· WO: <strong>' + escHtml(detail.work_order) + '</strong>' : ''}
-          </span>
-          <span style="font-size:13px;color:var(--gray-500)">${scannedCount}/${total} picked</span>
-        </div>
-        <div class="progress-bar">
-          <div class="fill ${pct === 100 ? 'complete' : ''}" style="width:${pct}%"></div>
-        </div>`;
-
-      for (const item of detail.items) {
-        const hasBin = !!item.from_bin;
-        const scannedClass = item.scanned ? 'badge-scanned' : (hasBin ? 'badge-ok' : 'badge-pending');
-        const scannedLabel = item.scanned ? '✓ Picked' : (hasBin ? 'Ready' : 'No Bin');
-
-        html += `
-          <div class="item-row ${item.scanned ? 'scan-flash' : ''}">
-            <div class="item-info">
-              <div class="item-code">${escHtml(item.item_code)}</div>
-              <div class="item-name">${escHtml(item.item_name || '')}</div>
-              <div class="item-meta">
-                Batch: <strong>${escHtml(item.batch_no || '—')}</strong>
-                ${item.from_bin ? '· Bin: <strong>' + escHtml(item.from_bin) + '</strong>' : ''}
-                ${item.to_warehouse ? '· To: <strong>' + escHtml(item.to_warehouse) + '</strong>' : ''}
-              </div>
-            </div>
-            <div style="text-align:right">
-              <div class="item-qty">${item.qty} <span class="uom">${escHtml(item.uom || '')}</span></div>
-              <span class="badge ${scannedClass}" style="margin-top:4px">${scannedLabel}</span>
-            </div>
-            ${!item.scanned && hasBin ? `
-            <div class="item-action">				<button class="btn btn-success btn-sm scan-pick-btn"
-                data-task="${escHtml(detail.name)}"
-                data-row="${escHtml(item.name)}"
-                data-item="${escHtml(item.item_code)}"
-                data-batch="${escHtml(item.batch_no || '')}"
-                data-bin="${escHtml(item.from_bin)}">
-                Pick
-              </button>
-            </div>` : ''}
-          </div>`;
-      }
-
-      // Show a "Submit Stock Entry" button for completed tasks that
-      // haven't been submitted yet (auto-submit may have failed).
-      if (detail.status === 'Completed' && detail.stock_entry && pct === 100) {
-        html += `
-          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-200)">
-            <button class="btn btn-full btn-success submit-se-btn"
-              data-task="${escHtml(detail.name)}">
-              📄 Submit Stock Entry
-            </button>
-          </div>`;
-      }
-
-      bodyEl.innerHTML = html;		// Attach pick scan handlers
-      bodyEl.querySelectorAll('.scan-pick-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          showScanDialog({
-            type: 'pick',
-            taskName: btn.dataset.task,
-            rowName: btn.dataset.row,
-            itemCode: btn.dataset.item,
-            batchNo: btn.dataset.batch,
-            binLocation: btn.dataset.bin,
-            buttonEl: btn
-          });
-        });
-      });
-
-      // Attach Submit Stock Entry button handler
-      bodyEl.querySelectorAll('.submit-se-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          btn.disabled = true;
-          btn.textContent = '⏳ Submitting…';
-          try {
-            const result = await callMutation('warehouse_binning.api.submit_pick_task_stock_entry', {
-              task_name: btn.dataset.task
-            });
-            showToast('✓ Stock Entry submitted!', 'success');
-            btn.textContent = '✅ Done';
-            // Reload after a moment
-            setTimeout(() => loadPickTasks(), 500);
-          } catch (err) {
-            btn.disabled = false;
-            btn.textContent = '📄 Submit Stock Entry';
-            showToast('✗ ' + err.message, 'error');
-          }
-        });
-      });
-    } catch (err) {
-      bodyEl.innerHTML = `<div style="padding:16px;color:var(--red);font-size:13px">Error: ${escHtml(err.message)}</div>`;
-    }
-  }
-
-  /* ============================== Pick Scan ============================== */
-  async function submitPickScan(taskName, rowName, itemCode, batchNo, expectedBin, scannedBin, buttonEl, close) {
-    if (scannedBin !== expectedBin) {
-      showToast('✗ Bin mismatch: expected ' + expectedBin, 'error');
-      return;
-    }
-    buttonEl.disabled = true;
-    buttonEl.textContent = '…';
-
-    try {
-      const result = await callMutation('warehouse_binning.api.scan_pick_item', {
-        task_name: taskName,
-        row_name: rowName,
-        from_bin: scannedBin,
-        batch_no: batchNo || undefined
-      });
-
-      if (result === 'queued') {
-        showToast('📦 Queued — will sync when online', 'success');
-        buttonEl.textContent = '⏳';
-      } else {
-        showToast('✓ Picked ' + itemCode + ' from ' + scannedBin, 'success');
-      }
-      close();
-      setTimeout(() => loadPickTasks(), 300);
-    } catch (err) {
-      buttonEl.disabled = false;
-      buttonEl.textContent = 'Pick';
-      showToast('✗ ' + err.message, 'error');
-    }
-  }
-
-  /* ============================== Pick Tasks with Warehouse Filter ============================== */
-  let pickWarehouseFilter = '';
-
-  async function loadPickTasks() {
-    pickList.innerHTML = '';
-    pickEmpty.style.display = 'none';
-    pickLoad.style.display = '';
-
-    try {
-      const params = {};
-      if (pickWarehouseFilter) {
-        params.warehouse = pickWarehouseFilter;
-      }
-      const tasks = await call('warehouse_binning.api.get_open_pick_tasks', params);
-      pickLoad.style.display = 'none';
-
-      if (!tasks || tasks.length === 0) {
-        pickEmpty.style.display = '';
-        return;
-      }
-
-      let html = '';
-      for (const task of tasks) {
-        const statusClass = task.status === 'Completed' ? 'badge-completed'
-          : task.status === 'Partially Completed' ? 'badge-partial'
-          : 'badge-pending';
-        var reference = task.stock_entry
-          ? 'SE: ' + task.stock_entry
-          : task.work_order
-          ? 'WO: ' + task.work_order
-          : '';
-        html += `
-          <div class="card">
-            <div class="card-header" data-task="${escHtml(task.name)}">
-              <div>
-                <div class="title">${escHtml(task.name)}</div>
-                <div class="sub">${escHtml(task.warehouse)} · ${reference} · ${task.posting_date || ''}</div>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px">
-                <span class="badge ${statusClass}">${task.status}</span>
-                <span class="chevron">▾</span>
-              </div>
-            </div>
-            <div class="card-body collapsed" data-loaded="false">
-              <div class="loading" style="padding:20px 0">
-                <div class="spinner"></div>
-              </div>
-            </div>
-          </div>`;
-      }
-      pickList.innerHTML = html;
-
-      pickList.querySelectorAll('.card-header').forEach(hdr => {
-        hdr.addEventListener('click', () => {
-          const body = hdr.nextElementSibling;
-          if (!body) return;
-          hdr.classList.toggle('open');
-          body.classList.toggle('collapsed');
-          if (!body.classList.contains('collapsed') && body.dataset.loaded !== 'true') {
-            loadPickDetail(hdr.dataset.task, body);
-          }
-        });
-      });
-    } catch (err) {
-      pickLoad.style.display = 'none';
-      showToast('Error: ' + err.message, 'error');
-    }
-  }
-
-  /* ============================== Lookup ============================== */
-  async function doLookup() {
-    const query = lookupInput.value.trim();
-    if (!query) return;
-
-    lookupRes.innerHTML = '';
-    lookupLoad.style.display = '';
-
-    try {
-      // Determine if query looks like a batch or item code
-      // We search both: first as item_code, then as batch_no if no results
-      let results = await call('warehouse_binning.api.lookup_bin_stock', {
-        item_code: query
-      });
-
-      if (!results || results.length === 0) {
-        results = await call('warehouse_binning.api.lookup_bin_stock', {
-          batch_no: query
-        });
-      }
-
-      lookupLoad.style.display = 'none';
-
-      if (!results || results.length === 0) {
-        lookupRes.innerHTML = `
-          <div class="lookup-result">
-            <div class="lookup-empty">
-              <div class="icon">🔍</div>
-              <div class="text">No stock found for <strong>${escHtml(query)}</strong></div>
-            </div>
-          </div>`;
-        return;
-      }
-
-      // Group results
-      const totalQty = results.reduce((s, r) => s + r.qty, 0);
-      const uniqueBins = new Set(results.map(r => r.bin_location)).size;
-
-      let html = `
-        <div style="display:flex;gap:12px;margin-bottom:12px">
-          <div class="card" style="flex:1;margin-bottom:0">
-            <div style="padding:12px;text-align:center">
-              <div style="font-size:22px;font-weight:700;color:var(--gray-800)">${totalQty}</div>
-              <div style="font-size:11px;color:var(--gray-500)">Total Qty</div>
-            </div>
-          </div>
-          <div class="card" style="flex:1;margin-bottom:0">
-            <div style="padding:12px;text-align:center">
-              <div style="font-size:22px;font-weight:700;color:var(--gray-800)">${uniqueBins}</div>
-              <div style="font-size:11px;color:var(--gray-500)">Bins</div>
-            </div>
-          </div>
-          <div class="card" style="flex:1;margin-bottom:0">
-            <div style="padding:12px;text-align:center">
-              <div style="font-size:22px;font-weight:700;color:var(--gray-800)">${results.length}</div>
-              <div style="font-size:11px;color:var(--gray-500)">Entries</div>
-            </div>
-          </div>
-        </div>
-        <div class="lookup-result">
-          <table>
-            <thead>
-              <tr>
-                <th>Bin</th>
-                <th>Item</th>
-                <th>Batch</th>
-                <th style="text-align:right">Qty</th>
-              </tr>
-            </thead>
-            <tbody>`;
-
-      for (const row of results) {
-        html += `
-          <tr>
-            <td><a class="bin-link" href="#">${escHtml(row.bin_location)}</a></td>
-            <td>${escHtml(row.item_code)}</td>
-            <td>${escHtml(row.batch_no || '—')}</td>
-            <td style="text-align:right;font-weight:600">${row.qty}</td>
-          </tr>`;
-      }
-
-      html += `
-            </tbody>
-          </table>
-        </div>`;
-
-      lookupRes.innerHTML = html;
-    } catch (err) {
-      lookupLoad.style.display = 'none';
-      lookupRes.innerHTML = `
-        <div class="lookup-result">
-          <div class="lookup-empty">
-            <div class="icon">⚠️</div>
-            <div class="text" style="color:var(--red)">${escHtml(err.message)}</div>
-          </div>
-        </div>`;
-    }
-  }
-
-  lookupBtn.addEventListener('click', doLookup);
-  lookupInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); doLookup(); }
-  });
-
-
-
-  /* ============================== Offline Queue (IndexedDB) ============================== */
-  const DB_NAME = 'warehouse_binning_queue';
-  const DB_VERSION = 1;
-  const STORE_NAME = 'scans';
-
-  function openDB() {
-    return new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = (e) => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, {
-            keyPath: 'id',
-            autoIncrement: true
-          });
-        }
-      };
-      req.onsuccess = (e) => resolve(e.target.result);
-      req.onerror = (e) => reject(e.target.error);
-    });
-  }
-
-  async function queueScan(method, args) {
-    const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    store.add({
-      method: method,
-      args: args,
-      timestamp: Date.now(),
-      retries: 0
-    });
-    await new Promise((resolve, reject) => {
-      tx.oncomplete = resolve;
-      tx.onerror = (e) => reject(e.target.error);
-    });
-    db.close();
-    await updateQueueBadge();
-  }
-
-  async function getQueuedScans() {
-    const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
-    const all = await new Promise((resolve, reject) => {
-      const req = store.getAll();
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = (e) => reject(e.target.error);
-    });
-    db.close();
-    return all;
-  }
-
-  async function removeScan(id) {
-    const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    store.delete(id);
-    await new Promise((resolve, reject) => {
-      tx.oncomplete = resolve;
-      tx.onerror = (e) => reject(e.target.error);
-    });
-    db.close();
-    await updateQueueBadge();
-  }
-
-  async function updateQueueBadge() {
-    try {
-      const all = await getQueuedScans();
-      if (all.length > 0) {
-        queueBadge.textContent = all.length;
-        queueBadge.style.display = '';
-      } else {
-        queueBadge.style.display = 'none';
-      }
-    } catch (_) {
-      queueBadge.style.display = 'none';
-    }
-  }
-
-  async function processQueue() {
-    try {
-      const all = await getQueuedScans();
-      if (all.length === 0) return;
-
-      statusBadge.textContent = 'Syncing';
-      statusBadge.className = 'header-badge syncing';
-
-      let processed = 0;
-      for (const item of all) {
-        try {
-          await call(item.method, item.args);
-          await removeScan(item.id);
-          processed++;
-        } catch (err) {
-          // If it's still a network error, stop processing and wait
-          if (err.message.includes('Failed to fetch') ||
-              err.message.includes('NetworkError') ||
-              err.message.includes('NetworkError when attempting to fetch')) {
-            break;
-          }
-          // Otherwise remove invalid entries (e.g. 404, bad request)
-          await removeScan(item.id);
-          processed++;
-        }
-      }
-
-      await updateQueueBadge();
-
-      if (processed > 0) {
-        showToast('✓ Synced ' + processed + ' scan(s)', 'success');
-        // Reload task lists to reflect changes
-        loadPutawayTasks();
-        loadPickTasks();
-      }
-
-      updateOnlineStatus();
-    } catch (_) {
-      updateOnlineStatus();
-    }
-  }
-
-  function updateOnlineStatus() {
-    const online = navigator.onLine;
-    if (online) {
-      statusBadge.textContent = 'Online';
-      statusBadge.className = 'header-badge';
-    } else {
-      statusBadge.textContent = 'Offline';
-      statusBadge.className = 'header-badge offline';
-    }
-    updateQueueBadge();
-  }
-
-  /* ============================== Utility ============================== */
-  function escHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
-  /* ============================== Init ============================== */
-  // Load putaway tasks on start
-  loadPutawayTasks();
-  updateOnlineStatus();
-
-  // Process any queued scans from a previous session
-  setTimeout(() => processQueue(), 2000);
-
-  // Focus lookup input when switching to lookup tab
-  // (handled in tab click handler)
-
-  /* ============================== Online / Offline Events ============================== */
-  window.addEventListener('online', () => {
-    updateOnlineStatus();
-    showToast('📡 Connection restored — syncing…', 'success');
-    processQueue();
-  });
-
-  window.addEventListener('offline', () => {
-    updateOnlineStatus();
-    showToast('📡 No connection — scans will be queued', 'error');
-  });
-
-  /* ============================== Pick Warehouse Filter ============================== */
-  const pickWarehouseInput = $('#pick-warehouse');
-  const pickFilterBtn = $('#pick-filter-btn');
-  const pickClearBtn = $('#pick-clear-btn');
-
-  pickFilterBtn.addEventListener('click', () => {
-    pickWarehouseFilter = pickWarehouseInput.value.trim();
-    loadPickTasks();
-  });
-
-  pickClearBtn.addEventListener('click', () => {
-    pickWarehouseInput.value = '';
-    pickWarehouseFilter = '';
-    loadPickTasks();
-  });
-
-  pickWarehouseInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      pickFilterBtn.click();
+  const prog = gl.createProgram();
+  gl.attachShader(prog, cs(gl.VERTEX_SHADER, vs));
+  gl.attachShader(prog, cs(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const pos = gl.getAttribLocation(prog, 'a_position');
+  gl.enableVertexAttribArray(pos);
+  gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+  const uRes = gl.getUniformLocation(prog, 'u_resolution');
+  const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+
+  // u_mouse is in pixel coordinates matching u_resolution (ShaderToy convention).
+  // Shaders that need normalized coords should use: u_mouse / u_resolution.
+  let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+  window.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width && rect.height) {
+      const nx = (event.clientX - rect.left) / rect.width;
+      const ny = 1.0 - (event.clientY - rect.top) / rect.height;
+      mouse.x = nx * canvas.width;
+      mouse.y = ny * canvas.height;
     }
   });
 
+  function render(t) {
+    if (typeof ResizeObserver === 'undefined') syncSize();
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    if (uTime) gl.uniform1f(uTime, t * 0.001);
+    if (uRes) gl.uniform2f(uRes, canvas.width, canvas.height);
+    if (uMouse) gl.uniform2f(uMouse, mouse.x, mouse.y);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(render);
+  }
+  render(0);
 })();
 </script>
-</body>
-</html>
+</div>
+<!-- STITCH_SHADER_END:ANIMATION_1 -->
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface/70 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-container-margin h-16 shadow-[0_0_15px_rgba(173,198,255,0.1)]">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">terminal</span>
+<span class="font-headline-md text-headline-md font-bold tracking-tight text-primary">LOGI-CORE COMMAND</span>
+</div>
+<div class="flex gap-4 items-center">
+<button class="text-on-surface-variant hover:bg-white/5 transition-colors p-2 rounded-full active:scale-95 duration-100">
+<span class="material-symbols-outlined">sync</span>
+</button>
+<button class="text-on-surface-variant hover:bg-white/5 transition-colors p-2 rounded-full active:scale-95 duration-100">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</header>
+<!-- Main Content Container -->
+<main class="pt-24 pb-24 px-4 max-w-[600px] mx-auto min-h-screen">
+<!-- Putaway Section -->
+<section class="tab-content active space-y-6" id="putaway-panel">
+<div class="glass-panel p-6 rounded-xl shadow-lg">
+<div class="flex items-center justify-between mb-6">
+<div>
+<p class="font-label-caps text-label-caps text-secondary uppercase tracking-widest mb-1">Current Task</p>
+<h2 class="font-headline-md text-headline-md text-on-surface">Inbound Putaway</h2>
+</div>
+<div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center border border-secondary/20">
+<span class="material-symbols-outlined text-secondary">input</span>
+</div>
+</div>
+<div class="space-y-4">
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant block ml-1">Scan Location Bin</label>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary">location_on</span>
+<input class="w-full bg-surface-container-low border border-white/10 rounded-xl py-4 pl-12 pr-4 text-on-surface font-data-mono focus:ring-0 focus:outline-none transition-all scan-glow" id="putaway-bin-input" placeholder="e.g., A-102-04" type="text"/>
+</div>
+</div>
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant block ml-1">Scan Item SKU</label>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary">barcode_scanner</span>
+<input class="w-full bg-surface-container-low border border-white/10 rounded-xl py-4 pl-12 pr-4 text-on-surface font-data-mono focus:ring-0 focus:outline-none transition-all scan-glow" id="putaway-sku-input" placeholder="Scan Barcode" type="text"/>
+</div>
+</div>
+<button class="w-full h-14 bg-primary text-on-primary font-headline-md text-headline-md rounded-xl flex items-center justify-center gap-2 hover:bg-primary-container active:scale-[0.98] transition-all shadow-lg mt-4" id="putaway-confirm-btn">
+<span class="material-symbols-outlined">check_circle</span>
+                        Confirm Putaway
+                    </button>
+</div>
+</div>
+<!-- Stats Mini Cards -->
+<div class="grid grid-cols-2 gap-4">
+<div class="glass-panel p-4 rounded-xl">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">Shift Total</p>
+<p class="font-headline-md text-headline-md font-bold text-on-surface">142 Items</p>
+</div>
+<div class="glass-panel p-4 rounded-xl">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">Accuracy</p>
+<p class="font-headline-md text-headline-md font-bold text-secondary">99.8%</p>
+</div>
+</div>
+</section>
+<!-- Pick Section -->
+<section class="tab-content space-y-6" id="pick-panel">
+<div class="glass-panel p-6 rounded-xl shadow-lg border-l-4 border-l-amber-400/50">
+<div class="flex items-center justify-between mb-6">
+<div>
+<p class="font-label-caps text-label-caps text-amber-400 uppercase tracking-widest mb-1">Active Batch</p>
+<h2 class="font-headline-md text-headline-md text-on-surface">Picking #B294-Z</h2>
+</div>
+<div class="px-3 py-1 bg-amber-400/10 text-amber-400 border border-amber-400/20 rounded-full font-label-caps text-[10px]">
+                        URGENT
+                    </div>
+</div>
+<div class="space-y-4">
+<div class="p-4 bg-white/5 rounded-lg border border-white/5">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-caps text-label-caps text-on-surface-variant">NEXT LOCATION</span>
+<span class="font-data-mono text-amber-400">ZONE B-12</span>
+</div>
+<p class="text-headline-md font-bold text-on-surface">B-12-09-02</p>
+</div>
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant block ml-1">Confirm SKU</label>
+<input class="w-full bg-surface-container-low border border-white/10 rounded-xl py-4 px-4 text-on-surface font-data-mono focus:ring-0 focus:outline-none transition-all scan-glow" id="pick-sku-input" placeholder="Scan Item to Pick" type="text"/>
+</div>
+<div class="flex gap-3">
+<button class="flex-1 h-12 border border-white/20 text-on-surface font-label-caps rounded-lg hover:bg-white/5 active:scale-95 transition-all" id="pick-skip-btn">
+                            Skip Bin
+                        </button>
+<button class="flex-[2] h-12 bg-secondary text-on-secondary font-label-caps rounded-lg flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all" id="pick-complete-btn">
+<span class="material-symbols-outlined text-[18px]">shopping_cart_checkout</span>
+                            Pick Item
+                        </button>
+</div>
+</div>
+</div>
+<!-- Progress Tracker -->
+<div class="glass-panel p-4 rounded-xl">
+<div class="flex justify-between text-label-caps mb-2">
+<span>Batch Progress</span>
+<span>12 / 18 Units</span>
+</div>
+<div class="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-2/3 shadow-[0_0_8px_rgba(78,222,163,0.5)]"></div>
+</div>
+</div>
+</section>
+<!-- Lookup Section -->
+<section class="tab-content space-y-6" id="lookup-panel">
+<div class="glass-panel p-6 rounded-xl shadow-lg">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">search</span>
+                    Inventory Lookup
+                </h2>
+<div class="relative mb-6">
+<input class="w-full bg-surface-container-low border border-white/10 rounded-xl py-4 pl-4 pr-14 text-on-surface font-data-mono focus:ring-0 focus:outline-none transition-all scan-glow" id="lookup-search-input" placeholder="Scan or Enter SKU / Bin..." type="text"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-primary/20 text-primary rounded-lg flex items-center justify-center active:scale-90 transition-all" id="lookup-search-btn">
+<span class="material-symbols-outlined">search</span>
+</button>
+</div>
+<div class="space-y-3" id="lookup-results">
+<div class="p-4 bg-white/5 border border-white/5 rounded-xl animate-pulse">
+<div class="h-4 w-24 bg-white/10 rounded mb-2"></div>
+<div class="h-6 w-full bg-white/10 rounded"></div>
+</div>
+<p class="text-center text-on-surface-variant font-label-caps mt-8">SCAN TO VIEW DATA</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 pb-safe px-4 bg-surface-container-lowest/80 backdrop-blur-2xl border-t border-white/5 shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+<button class="nav-item flex flex-col items-center justify-center text-secondary border-t-2 border-secondary pt-2 px-6 hover:bg-white/5 transition-all active:scale-90 duration-200" id="nav-putaway">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">input</span>
+<span class="font-label-caps text-label-caps mt-1">Putaway</span>
+</button>
+<button class="nav-item flex flex-col items-center justify-center text-on-surface-variant pt-2 px-6 hover:bg-white/5 transition-all active:scale-90 duration-200" id="nav-pick">
+<span class="material-symbols-outlined">shopping_cart</span>
+<span class="font-label-caps text-label-caps mt-1">Pick</span>
+</button>
+<button class="nav-item flex flex-col items-center justify-center text-on-surface-variant pt-2 px-6 hover:bg-white/5 transition-all active:scale-90 duration-200" id="nav-lookup">
+<span class="material-symbols-outlined">search</span>
+<span class="font-label-caps text-label-caps mt-1">Lookup</span>
+</button>
+</nav>
+<!-- Toast Notifications Container -->
+<div class="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-[400px] px-4 space-y-2 z-[60]" id="toast-container"></div>
+<script>
+        // Tab Navigation Logic
+        const navItems = {
+            'nav-putaway': 'putaway-panel',
+            'nav-pick': 'pick-panel',
+            'nav-lookup': 'lookup-panel'
+        };
+
+        Object.keys(navItems).forEach(navId => {
+            document.getElementById(navId).addEventListener('click', () => {
+                // Update UI state
+                Object.keys(navItems).forEach(id => {
+                    const btn = document.getElementById(id);
+                    const panel = document.getElementById(navItems[id]);
+                    
+                    if (id === navId) {
+                        btn.classList.add('text-secondary', 'border-t-2', 'border-secondary');
+                        btn.classList.remove('text-on-surface-variant');
+                        panel.classList.add('active');
+                        // Find and focus the first input in the panel
+                        const firstInput = panel.querySelector('input');
+                        if (firstInput) firstInput.focus();
+                    } else {
+                        btn.classList.remove('text-secondary', 'border-t-2', 'border-secondary');
+                        btn.classList.add('text-on-surface-variant');
+                        panel.classList.remove('active');
+                    }
+                });
+            });
+        });
+
+        // Toast Logic
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-secondary/90 border-secondary text-on-secondary',
+                error: 'bg-error-container/90 border-error text-on-error-container',
+                info: 'bg-primary-container/90 border-primary text-on-primary-container'
+            };
+
+            const icons = {
+                success: 'check_circle',
+                error: 'error',
+                info: 'info'
+            };
+
+            toast.className = `toast flex items-center gap-3 p-4 rounded-xl border backdrop-blur-md shadow-2xl ${colors[type]}`;
+            toast.innerHTML = `
+                <span class="material-symbols-outlined">${icons[type]}</span>
+                <span class="font-semibold">${message}</span>
+            `;
+
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-20px)';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
+
+        // Functional Handlers
+        document.getElementById('putaway-confirm-btn').addEventListener('click', () => {
+            const bin = document.getElementById('putaway-bin-input').value;
+            const sku = document.getElementById('putaway-sku-input').value;
+
+            if (!bin || !sku) {
+                showToast('Please scan both Bin and SKU', 'error');
+                return;
+            }
+
+            showToast(`SKU ${sku} successfully put away in ${bin}`);
+            document.getElementById('putaway-bin-input').value = '';
+            document.getElementById('putaway-sku-input').value = '';
+            document.getElementById('putaway-bin-input').focus();
+        });
+
+        document.getElementById('pick-complete-btn').addEventListener('click', () => {
+            const sku = document.getElementById('pick-sku-input').value;
+            if (!sku) {
+                showToast('Scan SKU to confirm pick', 'error');
+                return;
+            }
+            showToast('Item Picked. Proceed to B-12-09-03');
+            document.getElementById('pick-sku-input').value = '';
+        });
+
+        document.getElementById('lookup-search-btn').addEventListener('click', () => {
+            const query = document.getElementById('lookup-search-input').value;
+            if (!query) return;
+
+            const results = document.getElementById('lookup-results');
+            results.innerHTML = `
+                <div class="glass-panel p-4 rounded-xl border-l-4 border-l-primary animate-fadeIn">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-on-surface">SKU: ${query}</h3>
+                        <span class="px-2 py-0.5 bg-secondary/10 text-secondary text-[10px] rounded border border-secondary/20">IN STOCK</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <p class="text-[10px] text-on-surface-variant uppercase">Current Bin</p>
+                            <p class="font-data-mono">A-402-01</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-on-surface-variant uppercase">Quantity</p>
+                            <p class="font-data-mono">1,240 EA</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        // Listen for "Enter" key on all inputs
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const btnId = input.id.split('-')[0] + (input.id.includes('lookup') ? '-search-btn' : '-confirm-btn');
+                    const targetBtn = document.getElementById(btnId) || document.getElementById('pick-complete-btn');
+                    if (targetBtn) targetBtn.click();
+                }
+            });
+        });
+
+        // Micro-interaction: Focus effect on load
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('putaway-bin-input').focus();
+        });
+    </script>
+</body></html>
